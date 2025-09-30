@@ -1,0 +1,3562 @@
+<!DOCTYPE html>
+<html lang="sv">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Levervänlig Kost Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-blue: #3b82f6;
+            --primary-blue-dark: #2563eb;
+            --sidebar-bg: #1e293b;
+            --background: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-dark: #1e293b;
+            --text-light: #f8fafc;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            --green: #10b981;
+            --red: #ef4444;
+            --yellow: #f59e0b;
+            --light-red: #fef2f2;
+            /* Ljus färg för varning */
+            --deep-red: #b91c1c;
+            /* Mörkare rött för kant */
+            --water-blue: #38bdf8;
+            --activity-color: #f59e0b;
+            /* Gul/Orange för aktivitet */
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            background: var(--background);
+            color: var(--text-dark);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidomeny */
+        .sidebar {
+            width: 250px;
+            background: var(--sidebar-bg);
+            color: var(--text-light);
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            flex-shrink: 0;
+            gap: 20px;
+            /* Lägg till mellanrum mellan navigering och kalender */
+        }
+
+        .sidebar h1 {
+            margin: 0;
+            font-size: 1.6rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sidebar nav a {
+            color: #cbd5e1;
+            text-decoration: none;
+            padding: 14px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .sidebar nav a:hover,
+        .sidebar nav a.active {
+            background: var(--primary-blue);
+            color: var(--text-light);
+        }
+
+        /* Lås knapp i sidomenyn */
+        .btn-lock {
+            background: #f59e0b;
+            color: white;
+            padding: 10px;
+            margin-top: auto;
+            /* Trycker ner knappen i botten */
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-lock:hover {
+            background: #d97706;
+        }
+
+        .unlocked {
+            background: var(--green);
+        }
+
+        .unlocked:hover {
+            background: var(--green-dark);
+        }
+
+        /* Huvudinnehåll */
+        .content {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .card {
+            background: var(--card-bg);
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            margin-bottom: 24px;
+            transition: border 0.3s;
+        }
+
+        h2 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            color: var(--text-dark);
+        }
+
+        /* Formulär & Knappar */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        select,
+        input,
+        button,
+        textarea {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            box-sizing: border-box;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        select:focus,
+        input:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+        }
+
+        button {
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        button:hover {
+            background: var(--primary-blue-dark);
+        }
+
+        /* Radera knappar i tabell */
+        .btn-delete {
+            background: transparent;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            padding: 5px;
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+        }
+
+        /* Om appen är låst, dölj radera knappen */
+        .locked-feature {
+            display: none !important;
+        }
+
+        .btn-delete:hover {
+            background: #fee2e2;
+            color: var(--red);
+        }
+
+        /* AI-knappar */
+        .btn-gemini {
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            margin-top: 10px;
+        }
+
+        .btn-gemini:hover {
+            background: linear-gradient(135deg, #4f46e5, #9333ea);
+        }
+
+        .btn-water {
+            background: var(--water-blue);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            width: 30%;
+        }
+
+        .btn-water:hover {
+            background: #0ea5e9;
+        }
+
+        .btn-activity {
+            background: var(--activity-color);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            width: 30%;
+        }
+
+        .btn-activity:hover {
+            background: #d97706;
+            /* Mörkare orange */
+        }
+
+        .inline-goal-input {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        .inline-goal-input input {
+            width: 65%;
+            padding: 8px;
+        }
+
+        .inline-goal-input button {
+            width: 35%;
+            padding: 8px;
+        }
+
+        .btn-utility {
+            background: #64748b;
+            color: white;
+            /* Lagt till vit textfärg för utility-knappar */
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            /* Säkrar att den tar upp hela rutnätscellen */
+            padding: 12px 14px;
+            /* Säkrar att den ser ut som en knapp/input */
+            border-radius: 8px;
+            margin-top: 0;
+            /* Tar bort extra marginal */
+        }
+
+        .btn-utility:hover {
+            background: #475569;
+        }
+
+        .btn-import-wrapper {
+            /* Flex container för importknapp och dold input */
+            position: relative;
+            display: inline-block;
+            width: 100%;
+            box-sizing: border-box;
+            height: 100%;
+        }
+
+        .btn-import-label {
+            /* Gömmer det faktiska input-fältet */
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+
+        /* Tabell */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            border-bottom: 1px solid var(--border-color);
+            padding: 14px;
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        th {
+            background: #f8fafc;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+        }
+
+        .numeric-cell {
+            text-align: right;
+            /* Högerjustering för siffror */
+        }
+
+        /* Visuell varning för ej levervänliga måltider */
+        .warning-row {
+            background-color: var(--light-red);
+            border-left: 4px solid var(--deep-red);
+        }
+
+        .warning-row td {
+            border-color: #fecaca;
+        }
+
+        /* NYTT: Stil för mobilanpassade listor */
+        @media (max-width: 768px) {
+
+            table,
+            thead,
+            tbody,
+            th,
+            td,
+            tr {
+                display: block;
+                width: 100%;
+                /* Säkrar att element tar full bredd */
+            }
+
+            thead tr {
+                position: absolute;
+                top: -9999px;
+                left: -9999px;
+            }
+
+            tr {
+                border: 1px solid var(--border-color);
+                margin-bottom: 10px;
+                border-radius: 8px;
+                overflow: hidden;
+                background: var(--card-bg);
+            }
+
+            td {
+                border: none;
+                position: relative;
+                padding-left: 50%;
+                /* Skapar plats för etikett */
+                text-align: right;
+                font-size: 0.9rem;
+            }
+
+            td::before {
+                /* Visa kolumnrubriken som etikett */
+                content: attr(data-label);
+                position: absolute;
+                left: 14px;
+                width: 45%;
+                padding-right: 10px;
+                white-space: nowrap;
+                text-align: left;
+                font-weight: 600;
+                color: var(--text-dark);
+            }
+
+            /* Justera layout för sista kolumnen (Ta Bort) */
+            td:last-child {
+                text-align: center;
+                padding-left: 0;
+                background: #f8fafc;
+            }
+
+            td:last-child::before {
+                content: "";
+            }
+
+            /* Justeringar för Förhandsgranskning */
+            #mealPreviewContent {
+                white-space: normal !important;
+                /* Låt texten svepa in */
+                word-break: break-word;
+                /* Bryt långa ord */
+                line-height: 1.4;
+            }
+        }
+
+
+        /* Översikt Sida */
+        .overview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            margin: 0 0 5px 0;
+            font-size: 1rem;
+            color: var(--text-secondary);
+        }
+
+        .stat-card p {
+            margin: 0;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        .chart-container {
+            height: 350px;
+        }
+
+        /* Journal */
+        #journal-entries {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .journal-entry {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary-blue);
+            scroll-margin-top: 20px;
+            /* För smooth scroll */
+        }
+
+        .journal-entry small {
+            color: var(--text-secondary);
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        /* Styling för Humörväljare */
+        #journalMood {
+            padding: 0;
+            height: 30px;
+            margin-top: 10px;
+        }
+
+        #journalMood+p {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: 5px;
+        }
+
+
+        /* Gemini AI-svar / Feedback-ruta (Används nu för lokal feedback) */
+        .gemini-response {
+            background: linear-gradient(135deg, #f5f3ff, #faf5ff);
+            border: 1px solid #e9d5ff;
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 16px;
+            color: #5b21b6;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            /* Låter radbrytningar visas */
+            transition: all 0.3s ease;
+        }
+
+        .gemini-response.error {
+            background: #fef2f2;
+            border: 1px solid var(--deep-red);
+            color: var(--deep-red);
+        }
+
+        .gemini-response h3 {
+            margin-top: 0;
+            color: #7e22ce;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            border-bottom: 1px dashed #c084fc;
+            padding-bottom: 5px;
+        }
+
+        .gemini-response p {
+            margin-bottom: 0;
+        }
+
+        /* Laddningsmodal */
+        #loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            color: white;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        /* Kalender CSS (Flyttad till sidebar) */
+        .calendar-card {
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            background: #334155;
+            /* Mörkare bakgrund i sidomenyn */
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            margin: 0 0 20px 0;
+            /* Marginal i sidomenyn */
+            max-width: 100%;
+            /* Tar upp all plats i sidomenyn */
+            color: var(--text-light);
+            /* Ljus text */
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .calendar-header button {
+            width: 30px;
+            height: 30px;
+            padding: 0;
+            font-size: 0.8rem;
+            border-radius: 6px;
+            background: #475569;
+            /* Mörkare knapp bakgrund */
+            color: white;
+        }
+
+        .calendar-header button:hover {
+            background: var(--primary-blue);
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 3px;
+            font-size: 0.85rem;
+        }
+
+        .calendar-day-name {
+            font-weight: 600;
+            color: #94a3b8;
+            /* Ljusare text för dagar */
+            padding: 5px 0;
+        }
+
+        .calendar-day {
+            aspect-ratio: 1 / 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            position: relative;
+            font-weight: 500;
+            padding: 5px;
+            color: #f8fafc;
+        }
+
+        .calendar-day:active {
+            transform: scale(0.95);
+        }
+
+        .calendar-day:hover:not(.empty):not(.selected) {
+            background: #475569;
+        }
+
+        .calendar-day.empty {
+            cursor: default;
+            background: transparent;
+        }
+
+        .calendar-day.selected {
+            background: var(--primary-blue);
+            color: white;
+            font-weight: 700;
+            box-shadow: 0 0 0 2px var(--primary-blue-dark);
+        }
+
+        .calendar-day.logged::after {
+            content: '●';
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            font-size: 9px;
+            color: var(--green);
+            line-height: 1;
+        }
+
+        /* Journalvärden layout (mer kompakt) */
+        .metric-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        /* Responsivitet */
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                flex-direction: row;
+                justify-content: space-between;
+                /* Ändrad för bättre justering */
+                align-items: center;
+                /* Centrera vertikalt */
+                padding: 10px 15px;
+                /* Justerad padding */
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+                position: fixed;
+                /* Gör menyn fast i toppen */
+                top: 0;
+                z-index: 50;
+                background: var(--sidebar-bg);
+                /* Lägg till bakgrundsfärg */
+            }
+
+            .sidebar h1,
+            .sidebar .btn-lock {
+                display: none;
+                /* Dölj titel och låsknapp på små skärmar */
+            }
+
+            .sidebar nav {
+                display: flex;
+                flex-grow: 1;
+                justify-content: center;
+                /* Centrera nav-länkar */
+            }
+
+            .sidebar a {
+                padding: 8px 12px;
+                /* Justerad padding för länkar */
+                text-align: center;
+                flex-direction: column;
+                gap: 4px;
+                /* Mindre gap */
+                margin-bottom: 0;
+                font-size: 0.75rem;
+                /* Något mindre text */
+            }
+
+            .sidebar a span {
+                /* Visa text på mobilen */
+                display: block;
+            }
+
+            .content {
+                padding: 15px;
+                padding-top: 75px;
+                /* Justerad padding för fast meny */
+            }
+
+            .calendar-card {
+                display: none !important;
+                /* Dölj kalendern på mobilen */
+            }
+
+            .metric-grid,
+            .overview-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .overview-grid {
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Sidomeny -->
+    <aside class="sidebar">
+        <h1>🌿 Leverkost</h1> <!-- Ändrad från 🍎 till 🌿 -->
+
+        <!-- NYTT: Kalenderkort flyttas in här -->
+        <div class="calendar-card">
+            <div class="calendar-header">
+                <button onclick="changeMonth(-1)">&#9664;</button>
+                <h3 id="currentMonthYear" style="margin: 0; font-size: 1.2rem; color: white;"></h3>
+                <button onclick="changeMonth(1)">&#9654;</button>
+            </div>
+            <div class="calendar-grid" id="calendarDays">
+                <div class="calendar-day-name">Mån</div>
+                <div class="calendar-day-name">Tis</div>
+                <div class="calendar-day-name">Ons</div>
+                <div class="calendar-day-name">Tor</div>
+                <div class="calendar-day-name">Fre</div>
+                <div class="calendar-day-name">Lör</div>
+                <div class="calendar-day-name">Sön</div>
+                <!-- Kalenderdagar fylls i här av JS -->
+            </div>
+        </div>
+        <!-- SLUT Kalenderkort -->
+
+        <nav>
+            <a href="#" class="active" onclick="showPage('meals')">🥗 <span id="navMeals">Måltider</span></a>
+            <a href="#" onclick="showPage('overview')">📊 <span id="navOverview">Översikt</span></a>
+            <a href="#" onclick="showPage('journal')">📂 <span id="navJournal">Journal & Verktyg</span></a>
+        </nav>
+
+        <button id="lockButton" class="btn-lock" onclick="toggleLockState()">🔒 Låst</button>
+
+    </aside>
+
+    <!-- Huvudinnehåll -->
+    <main class="content">
+        <!-- Språkväljare läggs till här -->
+        <div class="card" style="margin-bottom: 10px; padding: 10px 24px;">
+            <label for="languageSelect" style="display: inline-block; margin-right: 10px;">Välj Språk:</label>
+            <select id="languageSelect" onchange="setLanguage(this.value)" style="width: auto; padding: 8px 12px;">
+                <option value="sv">Svenska</option>
+                <option value="en">English</option>
+                <option value="es">Español</option>
+                <option value="it">Italiano</option>
+            </select>
+        </div>
+        <!-- Slut Språkväljare -->
+
+        <!-- Måltider Sektion -->
+        <section id="meals" class="page active">
+
+            <!-- Gammalt Kalenderkort borttaget från denna plats -->
+
+            <div class="card">
+                <h2 id="h2AddMeal">Lägg till måltid</h2>
+                <!-- Datumväljare (ersätts av kalender, behålls dold för datahantering) -->
+                <div class="form-group" style="display: none;">
+                    <label for="mealDate">Datum:</label>
+                    <input type="date" id="mealDate" />
+                </div>
+
+                <div class="form-group">
+                    <label id="labelMealType" for="mealType">Måltid:</label>
+                    <!-- Måltidstyper fylls i av JavaScript -->
+                    <select id="mealType"></select>
+                </div>
+                <div class="form-group">
+                    <label id="labelFoodSelect" for="foodSelect">Livsmedel:</label>
+                    <!-- onchange för förhandsgranskning -->
+                    <select id="foodSelect" onchange="calculateMealPreview();"></select>
+                </div>
+
+                <!-- NYTT: Portionsbaserad inmatning -->
+                <div class="form-group">
+                    <label id="labelAmountValue" for="amountValue">Mängd:</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="number" id="amountValue" value="1" min="0.1" step="0.1" style="width: 50%;"
+                            oninput="calculateMealPreview();" />
+                        <!-- Enheter fylls i av JavaScript -->
+                        <select id="amountUnit" style="width: 50%;" onchange="calculateMealPreview();"></select>
+                        <input type="hidden" id="finalGrams" value="100">
+                    </div>
+                </div>
+
+                <!-- Förhandsgranskning av måltiden -->
+                <div id="mealPreview" class="gemini-response"
+                    style="display: none; border-left: 4px solid var(--primary-blue-dark); padding: 10px; margin-bottom: 10px; background: #e0f2fe; color: var(--text-dark);">
+                    <h3 id="h3CalculatedIntake"
+                        style="color: var(--primary-blue-dark); border-bottom: none; margin-top: 0; margin-bottom: 5px; font-size: 1rem; font-weight: 700;">
+                        Beräknat intag:</h3>
+                    <p id="mealPreviewContent" style="margin: 0;"></p>
+                </div>
+
+                <button id="buttonAddMeal" onclick="addMeal()">➕ Lägg till</button>
+            </div>
+
+            <!-- NYTT: Lägg till eget livsmedel -->
+            <div id="customFoodCard" class="card locked-feature">
+                <h2 id="h2AddCustomFood">🥩 Lägg till eget livsmedel</h2>
+                <div class="form-group">
+                    <label for="customFoodName">Namn:</label>
+                    <input type="text" id="customFoodName" placeholder="Ex: Hemlagad grön smoothie" />
+                </div>
+                <div class="overview-grid"
+                    style="grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px;">
+                    <div class="form-group">
+                        <label for="customFoodProtein" id="labelProtein">Protein (g/100g):</label>
+                        <input type="number" id="customFoodProtein" value="0" min="0" step="0.1" />
+                    </div>
+                    <div class="form-group">
+                        <label for="customFoodFat" id="labelFat">Fett (g/100g):</label>
+                        <input type="number" id="customFoodFat" value="0" min="0" step="0.1" />
+                    </div>
+                    <div class="form-group">
+                        <label for="customFoodCarbs" id="labelCarbs">Kolhydrater (g/100g):</label>
+                        <input type="number" id="customFoodCarbs" value="0" min="0" step="0.1" />
+                    </div>
+                    <div class="form-group">
+                        <label for="customFoodCalories" id="labelCalories">Kalorier (kcal/100g):</label>
+                        <input type="number" id="customFoodCalories" value="0" min="0" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label id="labelLiverFriendly">Levervänlig:</label>
+                    <input type="checkbox" id="customFoodFriendly" checked style="width: auto; margin-top: 5px;" />
+                    <span id="customFoodFriendlyDesc"
+                        style="font-size: 0.9rem; margin-left: 10px; color: var(--text-secondary);">Markera om
+                        livsmedlet stödjer leverhälsan.</span>
+                </div>
+                <button onclick="addCustomFood()" style="width: auto;" id="saveCustomFoodButton">+ Spara
+                    Livsmedel</button>
+            </div>
+            <!-- SLUT Custom Food -->
+
+            <!-- LOKAL FEEDBACK -->
+            <div class="card">
+                <h2 id="h2LiverHealthReport">🎯 Leverhälsorapport</h2>
+                <div id="liverHealthFeedback" class="gemini-response"
+                    style="display: block; background: #fffbeb; border: 1px solid #fcd34d; color: #b45309;">
+                    <!-- Innehåll genereras av JavaScript (updateLiverHealthFeedback) -->
+                    Laddar rapport...
+                </div>
+            </div>
+            <!-- SLUT LOKAL FEEDBACK -->
+
+            <div class="card">
+                <h2 id="h2MealsForDate">Måltider för <span id="mealsTitleDate">Idag</span></h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th id="thMealType">Måltid</th>
+                            <th id="thFoodItem">Livsmedel</th>
+                            <th id="thAmount">Mängd</th>
+                            <th id="thProtein">Protein</th>
+                            <th id="thFat">Fett</th>
+                            <th id="thCarbs">Kolhydrater</th>
+                            <th id="thCalories">Kalorier</th>
+                            <th id="thLiverFriendly">Levervänlig</th>
+                            <th id="thDeleteMeal">Ta bort</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mealTableBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Översikt Sektion -->
+        <section id="overview" class="page">
+            <!-- Målhantering -->
+            <div class="card">
+                <h2 id="h2SetDailyGoals">🏆 Sätt Dagliga Mål</h2>
+                <div class="overview-grid"
+                    style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
+                    <div class="form-group">
+                        <label for="goalCalories" id="labelGoalCalories">Kalorier (kcal):</label>
+                        <input type="number" id="goalCalories" placeholder="2000" min="500">
+                    </div>
+                    <div class="form-group">
+                        <label for="goalProtein" id="labelGoalProtein">Protein (g):</label>
+                        <input type="number" id="goalProtein" placeholder="100" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="goalFat" id="labelGoalFat">Fett (g):</label>
+                        <input type="number" id="goalFat" placeholder="60" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="goalCarbs" id="labelGoalCarbs">Kolhydrater (g):</label>
+                        <input type="number" id="goalCarbs" placeholder="250" min="0">
+                    </div>
+                </div>
+                <button onclick="saveGoals()" style="width: auto; margin-top: 10px;" id="saveGoalsButton">Spara
+                    Mål</button>
+            </div>
+
+            <!-- Hydrering -->
+            <div class="card">
+                <h2 id="h2Hydration">💧 Hydrering</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3 style="margin: 0; font-size: 1.5rem; color: var(--water-blue);"><span id="intakeTodayText">Intag
+                            idag:</span> <span id="waterIntakeDisplay">0 ml</span></h3>
+                    <h3 style="margin: 0; font-size: 1.5rem; color: var(--text-secondary);"><span
+                            id="waterGoalText">Mål:</span> <span id="waterGoalDisplay">0 ml</span></h3>
+                </div>
+                <!-- NYTT: Inline input för att sätta vattenmål -->
+                <div class="inline-goal-input">
+                    <input type="number" id="waterGoalInput" placeholder="Sätt mål (ml)" value="2500" min="100">
+                    <button onclick="setWaterGoal()" id="setWaterGoalButton">Sätt Mål</button>
+                </div>
+                <div style="display: flex; justify-content: space-between; gap: 10px; margin-top: 10px;">
+                    <button class="btn-water" onclick="addWater(250)">+ 250 ml</button>
+                    <button class="btn-water" onclick="addWater(500)">+ 500 ml</button>
+                    <button class="btn-water" onclick="addWater(-250)">- 250 ml</button>
+                </div>
+            </div>
+
+            <!-- Aktivitet -->
+            <div class="card">
+                <h2 id="h2Activity">🏃‍♀️ Aktivitet</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3 style="margin: 0; font-size: 1.5rem; color: var(--activity-color);"><span
+                            id="trainingTodayText">Träning idag:</span> <span id="activityMinutesDisplay">0 min</span>
+                    </h3>
+                    <h3 style="margin: 0; font-size: 1.5rem; color: var(--text-secondary);"><span
+                            id="activityGoalText">Mål:</span> <span id="activityGoalDisplay">0 min</span></h3>
+                </div>
+                <!-- NYTT: Inline input för att sätta aktivitetsmål -->
+                <div class="inline-goal-input">
+                    <input type="number" id="activityGoalInput" placeholder="Sätt mål (min)" value="30" min="1">
+                    <button onclick="setActivityGoal()" id="setActivityGoalButton">Sätt Mål</button>
+                </div>
+                <div style="display: flex; justify-content: space-between; gap: 10px; margin-top: 10px;">
+                    <button class="btn-activity" onclick="addActivity(15)">+ 15 min</button>
+                    <button class="btn-activity" onclick="addActivity(30)">+ 30 min</button>
+                    <button class="btn-activity" onclick="addActivity(-15)">- 15 min</button>
+                </div>
+            </div>
+
+            <div class="overview-grid">
+                <div class="stat-card">
+                    <h3 id="h3TotalProtein">Totalt Protein</h3>
+                    <p id="totalProtein">0 g</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="h3TotalFat">Totalt Fett</h3>
+                    <p id="totalFat">0 g</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="h3TotalCarbs">Totala Kolhydrater</h3>
+                    <p id="totalCarbs">0 g</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="h3TotalCalories">Totala Kalorier</h3>
+                    <p id="totalCalories">0 kcal</p>
+                </div>
+            </div>
+
+            <!-- Målöversiktsdiagram -->
+            <div class="card">
+                <h2 id="h2DailyGoalStatus">Daglig Målstatus</h2>
+                <p class="text-secondary" id="pDailyGoalStatusDesc">Jämför din dagliga prestation mot dina satta mål.
+                </p>
+                <div class="chart-container">
+                    <canvas id="goalStatusChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 id="h2CalDistributionMacro">Kalorifördelning från makronutrienter</h2>
+                <div class="chart-container">
+                    <canvas id="nutritionChart"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <h2 id="h2CalDistributionLiver">Kalorifördelning: Levervänlig vs. Ej levervänlig</h2>
+                <div class="chart-container">
+                    <canvas id="liverFriendlyChart"></canvas>
+                </div>
+            </div>
+            <!-- Trenddiagram -->
+            <div class="card">
+                <h2 id="h2CalorieTrend">Kaloritrend (Sista 7 dagarna)</h2>
+                <p class="text-secondary" id="pCalorieTrendDesc">Visar det totala dagliga kaloriintaget baserat på
+                    loggade måltider, jämfört med ditt mål.</p>
+                <div class="chart-container">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+            <!-- Aktivitetstrenddiagram -->
+            <div class="card">
+                <h2 id="h2ActivityTrend">Aktivitetstrend (Sista 7 dagarna)</h2>
+                <p class="text-secondary" id="pActivityTrendDesc">Visar loggade träningsminuter de senaste 7 dagarna,
+                    jämfört med ditt mål.</p>
+                <div class="chart-container">
+                    <canvas id="activityTrendChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Journal & Verktyg Sektion -->
+        <section id="journal" class="page">
+            <div class="card">
+                <h2 id="h2WriteJournalEntry">Skriv en journalanteckning</h2>
+                <!-- Humörväljare -->
+                <div class="form-group">
+                    <label for="journalMood" id="labelMood">Humör idag (1=Dåligt, 5=Toppen):</label>
+                    <input type="range" id="journalMood" min="1" max="5" value="3" list="mood-markers">
+                    <datalist id="mood-markers">
+                        <option value="1" label="1">
+                        <option value="2" label="2">
+                        <option value="3" label="3">
+                        <option value="4" label="4">
+                        <option value="5" label="5">
+                    </datalist>
+                    <p class="text-secondary mt-2"><span id="moodValueText">Valt humör:</span> <span
+                            id="currentMoodValue">3</span></p>
+                </div>
+                <div class="form-group">
+                    <label for="journalText" id="labelHowAreYou">Hur mår du idag?</label>
+                    <textarea id="journalText" rows="5"
+                        placeholder="Beskriv dina symptom, din energi, eller andra tankar..."></textarea>
+                </div>
+                <button id="saveJournalButton" onclick="saveJournalEntry()">💾 Spara inlägg</button>
+                <!-- AI-knapp Togs bort för att förhindra krasch: <button class="btn-gemini" onclick="getCorrelationAnalysis()">✨ AI Sammanfattning (Senaste dagarna)</button> -->
+                <div id="correlationAnalysis" class="gemini-response" style="display: none;"></div>
+
+            </div>
+
+            <!-- NYTT KORT: Journalvärden (Leverenzymer, etc.) -->
+            <div class="card">
+                <h2 id="h2TrackHealthMetrics">🧪 Spåra Journalvärden</h2>
+                <div class="metric-grid">
+                    <div class="form-group">
+                        <label for="metricDate" id="labelDateOfTest">Datum för prov:</label>
+                        <input type="date" id="metricDate" />
+                    </div>
+                    <div class="form-group">
+                        <label for="metricName" id="labelMetricValue">Värde (Ex: ALAT, Kolesterol):</label>
+                        <input type="text" id="metricName" placeholder="T.ex. ALAT, Bilirubin"
+                            onchange="renderMetricChart()" /> <!-- Added onchange -->
+                    </div>
+                </div>
+                <div class="metric-grid">
+                    <div class="form-group">
+                        <label for="metricValue" id="labelMetricResult">Resultat:</label>
+                        <input type="number" id="metricValue" step="0.01" placeholder="T.ex. 0.62" />
+                    </div>
+                    <div class="form-group">
+                        <label for="metricUnit" id="labelMetricUnit">Enhet (Ex: $\mu$mol/L):</label>
+                        <input type="text" id="metricUnit" placeholder="T.ex. $\mu$mol/L, mmol/L" />
+                    </div>
+                </div>
+                <button onclick="saveHealthMetric()" id="saveMetricButton">+ Spara Värde</button>
+            </div>
+
+            <!-- NYTT: Journalvärde Trenddiagram -->
+            <div class="card">
+                <h2 id="h2MetricTrend">📉 Journalvärdestrender</h2>
+                <p class="text-secondary" id="pMetricTrendDesc">Välj ett spårat värde ovan för att se hur det förändrats
+                    över tid.</p>
+                <div class="chart-container">
+                    <canvas id="metricTrendChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 id="h2MyNotesAndMetrics">Mina anteckningar och Värden</h2>
+
+                <!-- Tabell för Journalvärden -->
+                <h3 id="h3LoggedMetrics" style="margin-top: 0; margin-bottom: 10px; font-size: 1.2rem;">Loggade
+                    Journalvärden</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Datum</th>
+                            <th>Värde</th>
+                            <th>Resultat</th>
+                            <th>Enhet</th>
+                            <th id="metricDeleteHeader">Ta bort</th>
+                        </tr>
+                    </thead>
+                    <tbody id="metricTableBody">
+                        <!-- Data renderas här -->
+                    </tbody>
+                </table>
+
+                <!-- Filtrering för Journalanteckningar -->
+                <h3 id="h3JournalEntriesLog" style="margin-top: 25px; margin-bottom: 10px; font-size: 1.2rem;">
+                    Journalanteckningar</h3>
+                <div class="overview-grid" style="grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="filterMood" id="labelFilterMood">Filtrera Humör:</label>
+                        <select id="filterMood" onchange="renderJournalEntries()">
+                            <option value="0">Alla</option>
+                            <option value="5">5 (🤩 Toppen)</option>
+                            <option value="4">4 (😄 Bra)</option>
+                            <option value="3">3 (🙂 Neutral)</option>
+                            <option value="2">2 (😐 Lite nere)</option>
+                            <option value="1">1 (😞 Dåligt)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="filterText" id="labelSearchText">Sök text:</label>
+                        <input type="text" id="filterText" placeholder="Sök ord i texten..."
+                            oninput="renderJournalEntries()">
+                    </div>
+                </div>
+                <div id="journal-entries">
+                    <p>Inga anteckningar än.</p>
+                </div>
+            </div>
+
+            <!-- NYTT: Dataverktyg -->
+            <div id="dataToolsCard" class="card locked-feature">
+                <h2 id="h2DataTools">🛠️ Dataverktyg</h2>
+                <div class="overview-grid" style="grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                    <button class="btn-utility" onclick="exportData()" id="exportDataButton">⬇️ Exportera data</button>
+
+                    <!-- FIXAD Import-knapp: Använder div/button/input struktur för att matcha Export-knappens utseende -->
+                    <div class="btn-import-wrapper">
+                        <button class="btn-utility"
+                            style="position: absolute; top: 0; left: 0; height: 100%; pointer-events: none;"
+                            id="importDataButton">⬆️ Importera data</button>
+                        <input type="file" id="importFile" accept="application/json" onchange="importData(event)"
+                            style="opacity: 0; position: absolute; top: 0; left: 0; height: 100%; width: 100%; cursor: pointer;" />
+                    </div>
+
+                    <button class="btn-delete btn-utility" style="background: var(--red); color: white;"
+                        onclick="resetData()" id="resetDataButton">🗑️ Nollställ all data</button>
+                </div>
+                <p style="margin-top: 15px; font-size: 0.85rem; color: var(--text-secondary);" id="pUtilityDesc">Använd
+                    verktygen för att säkerhetskopiera din data eller rensa din logg.</p>
+            </div>
+            <!-- SLUT Dataverktyg -->
+        </section>
+    </main>
+
+    <div id="loader" style="display: none;">Bearbetar...</div>
+
+    <script>
+        // Global variabel för att hålla det aktuella språket (standard till svenska)
+        let currentLang = localStorage.getItem('appLanguage') || 'sv';
+
+        // --- LÅS FUNKTIONALITET OCH VARIABLER ---
+        const ADMIN_PASSWORD = "admin"; // Lätt att komma ihåg för demonstration. Ändra detta!
+        let isLocked = true; // BÖRJA LÅST
+
+        function toggleLockState() {
+            const T = Translations[currentLang];
+
+            if (isLocked) {
+                // Försök låsa upp
+                const password = prompt(T.prompts.unlockPassword);
+                if (password === ADMIN_PASSWORD) {
+                    isLocked = false;
+                    alert(T.alerts.unlocked);
+                } else if (password !== null) {
+                    alert(T.alerts.wrongPassword);
+                }
+            } else {
+                // Lås igen
+                isLocked = true;
+                alert(T.alerts.locked);
+            }
+            updateLockUI();
+            updateUI(); // Återställa tabellerna och korten
+        }
+
+        function updateLockUI() {
+            const T = Translations[currentLang];
+            const lockButton = document.getElementById('lockButton');
+            const customFoodCard = document.getElementById('customFoodCard');
+            const dataToolsCard = document.getElementById('dataToolsCard');
+
+            // Uppdatera sidomenyknappen
+            if (lockButton) {
+                lockButton.classList.toggle('unlocked', !isLocked);
+                lockButton.innerHTML = isLocked ? `🔒 ${T.buttons.locked}` : `🔓 ${T.buttons.unlocked}`;
+            }
+
+            // Dölj/Visa kort
+            if (customFoodCard) {
+                customFoodCard.classList.toggle('locked-feature', isLocked);
+            }
+            if (dataToolsCard) {
+                dataToolsCard.classList.toggle('locked-feature', isLocked);
+            }
+
+            // Uppdatera om Ta Bort-kolumnen ska visas
+            const deleteHeaders = document.querySelectorAll('#meals thead th:last-child, #metricDeleteHeader');
+            deleteHeaders.forEach(header => {
+                header.style.display = isLocked ? 'none' : 'table-cell';
+            });
+
+        }
+
+        // --- LOKALISERING (FÖR ENKEL ÖVERSÄTTNING) ---
+        const Translations = {
+            sv: {
+                // Generella
+                appTitle: "Leverkost",
+                today: "Idag",
+                prompts: {
+                    unlockPassword: "Ange lösenord för att låsa upp farliga funktioner:",
+                    confirmReplaceData: "Är du säker på att du vill ersätta din nuvarande data med den importerade filen?",
+                    confirmResetData: "VARNING: Är du helt säker på att du vill nollställa all data? Detta kan inte ångras!",
+                    invalidName: "Vänligen ange ett unikt namn för livsmedlet.",
+                    metricValidation: "Vänligen fyll i datum, värde, resultat och enhet."
+                },
+                alerts: {
+                    unlocked: "Appen är upplåst!",
+                    wrongPassword: "Fel lösenord.",
+                    locked: "Appen är låst.",
+                    customFoodSuccess: (name) => `Livsmedlet "${name}" har lagts till och är nu tillgängligt i rullistan!`,
+                    importError: "Fel: Filen verkar inte vara en giltig Leverkost-backupfil.",
+                    jsonError: "Fel vid import: Kunde inte läsa filen som JSON. Kontrollera filformatet."
+                },
+                // NYTT: Lokaliserade feedbackmeddelanden
+                feedback: {
+                    welcome: "Välkommen!",
+                    logFirstMeal: (date) => `Logga din första måltid för att få en leverhälsorapport för ${date}.`,
+                    excellent: "Utmärkt! ✅",
+                    excellentMessage: "Ditt intag består till 100% av levervänliga kalorier. Fortsätt äta näringsrikt och undvik de processade livsmedlen!",
+                    good: "Mycket Bra! 🌟",
+                    goodMessage: (percentage, kcal, list) => `Endast ${percentage}% av ditt kaloriintag är icke-levervänligt. Du ligger bra till! Försök att byta ut dessa: <br>${list}`,
+                    warning: "Se över din kost! ⚠️",
+                    warningMessage: (percentage, kcal, list) => `${percentage}% av ditt intag (${kcal} kcal) kommer från livsmedel som är tungt för levern. Fokusera på att minska följande: <br>${list}`,
+                },
+                buttons: {
+                    locked: "Låst",
+                    unlocked: "Upplåst",
+                    saveGoals: "Spara Mål",
+                    setGoal: "Sätt Mål",
+                    saveEntry: "💾 Spara inlägg",
+                    saveMetric: "+ Spara Värde",
+                    saveCustomFood: "+ Spara Livsmedel", // Ny dedikerad knapp
+                    export: "⬇️ Exportera data",
+                    import: "⬆️ Importera data",
+                    reset: "🗑️ Nollställ all data",
+                },
+                // NYTT: Navigation Titles
+                nav: {
+                    meals: "Måltider",
+                    overview: "Översikt",
+                    journal: "Journal & Verktyg"
+                },
+                // Måltidsformulär
+                h2AddMeal: "Lägg till måltid",
+                labelMealType: "Måltid:",
+                labelFoodItem: "Livsmedel:",
+                labelAmount: "Mängd:",
+                h3CalculatedIntake: "Beräknat intag:",
+                buttonAddMeal: "Lägg till",
+                h2AddCustomFood: "🥩 Lägg till eget livsmedel",
+                labelProtein: "Protein (g/100g):",
+                labelFat: "Fett (g/100g):",
+                labelCarbs: "Kolhydrater (g/100g):",
+                labelCalories: "Kalorier (kcal/100g):",
+                labelLiverFriendly: "Levervänlig:",
+                customFoodFriendlyDesc: "Markera om livsmedlet stödjer leverhälsan.",
+                h2LiverHealthReport: "🎯 Leverhälsorapport",
+                mealTableTitle: "Måltider för",
+
+                // Måltidstyper
+                mealTypes: {
+                    "Frukost": "Frukost",
+                    "Lunch": "Lunch",
+                    "Mellanmål": "Mellanmål",
+                    "Middag": "Middag"
+                },
+                // Enheter (nyckeln är vikten i gram / 100g)
+                units: [
+                    { value: "100", text: "gram (g)" },
+                    { value: "100", text: "dl (c:a 1 dl = 100g)" },
+                    { value: "50", text: "st (c:a 50g/st)" },
+                    { value: "1", text: "ml (kryddmått, c:a 1g/ml)" },
+                    { value: "5", text: "tsk (tesked, c:a 5g/tsk)" },
+                    { value: "15", text: "msk (matsked, c:a 15g/msk)" },
+                    { value: "50", text: "0.5 dl (c:a 50g)" }
+                ],
+                // Matöversättningar (Svenskt namn som nyckel)
+                foodNames: {
+                    "Avokado": "Avokado",
+                    "Blåbär": "Blåbär",
+                    "Broccoli": "Broccoli",
+                    "Brunt ris": "Brunt ris",
+                    "Fullkornsbröd": "Fullkornsbröd",
+                    "Kycklingbröst (grillad)": "Kycklingbröst (grillad)",
+                    "Lax (ugnsbakad)": "Lax (ugnsbakad)",
+                    "Spenat": "Spenat",
+                    "Morötter": "Morötter",
+                    "Havregryn": "Havregryn",
+                    "Quinoa": "Quinoa",
+                    "Valnötter": "Valnötter",
+                    "Mandlar": "Mandlar",
+                    "Torsk (filé)": "Torsk (filé)",
+                    "Ägg (kokt)": "Ägg (kokt)",
+                    "Olivolja (extra virgin)": "Olivolja (extra virgin)",
+                    "Kaffe (svart)": "Kaffe (svart)",
+                    "Grapefrukt": "Grapefrukt",
+                    "Linser (kokta)": "Linser (kokta)",
+                    "Kikärtor (kokta)": "Kikärtor (kokta)",
+                    "Kalkonkött (magert)": "Kalkonkött (magert)",
+                    "Fet yoghurt (osötad)": "Fet yoghurt (osötad)",
+                    "Äpple": "Äpple",
+                    "Apelsin": "Apelsin",
+                    "Jordgubbar": "Jordgubbar",
+                    "Sötpotatis (bakad)": "Sötpotatis (bakad)",
+                    "Grönkål": "Grönkål",
+                    "Lök": "Lök",
+                    "Nötkött (fettrik)": "Nötkött (fettrik)",
+                    "Läsk (sötad)": "Läsk (sötad)",
+                    "Vitt bröd": "Vitt bröd",
+                    "Pommes frites": "Pommes frites",
+                    "Godis (gelé)": "Godis (gelé)",
+                    "Bacon": "Bacon",
+                    "Korv (med hög fetthalt)": "Korv (med hög fetthalt)",
+                    "Raffinerat socker": "Raffinerat socker",
+                    "Energidryck (sötad)": "Energidryck (sötad)",
+                    "Kex (söta)": "Kex (söta)"
+                },
+                // Tabellrubriker
+                tableHeaders: {
+                    MealType: "Måltid",
+                    FoodItem: "Livsmedel",
+                    Amount: "Mängd",
+                    Protein: "Protein",
+                    Fat: "Fett",
+                    Carbs: "Kolhydrater",
+                    Calories: "Kalorier",
+                    LiverFriendly: "Levervänlig",
+                    DeleteMeal: "Ta bort",
+                },
+                // NYTT: Overview Titles
+                overview: {
+                    setGoals: "🏆 Sätt Dagliga Mål",
+                    goalCalories: "Kalorier (kcal):",
+                    goalProtein: "Protein (g):",
+                    goalFat: "Fett (g):",
+                    goalCarbs: "Kolhydrater (g):",
+                    placeholderCalories: "2000",
+                    placeholderProtein: "100",
+                    placeholderFat: "60",
+                    placeholderCarbs: "250",
+
+                    hydration: "💧 Hydrering",
+                    intakeToday: "Intag idag:",
+                    goal: "Mål:",
+                    placeholderWaterGoal: "Sätt mål (ml)",
+
+                    activity: "🏃‍♀️ Aktivitet",
+                    trainingToday: "Träning idag:",
+                    placeholderActivityGoal: "Sätt mål (min)",
+
+                    totalProtein: "Totalt Protein",
+                    totalFat: "Totalt Fett",
+                    totalCarbs: "Totala Kolhydrater",
+                    totalCalories: "Totala Kalorier",
+
+                    dailyGoalStatus: "Daglig Målstatus",
+                    dailyGoalStatusDesc: "Jämför din dagliga prestation mot dina satta mål.",
+                    calDistributionMacro: "Kalorifördelning från makronutrienter",
+                    calDistributionLiver: "Kalorifördelning: Levervänlig vs. Ej levervänlig",
+                    calorieTrend: "Kaloritrend (Sista 7 dagarna)",
+                    calorieTrendDesc: "Visar det totala dagliga kaloriintaget baserat på loggade måltider, jämfört med ditt mål.",
+                    activityTrend: "Aktivitetstrend (Sista 7 dagarna)",
+                    activityTrendDesc: "Visar loggade träningsminuter de senaste 7 dagarna, jämfört med ditt mål."
+                },
+                // NYTT: Journal Titles & Labels
+                journal: {
+                    writeEntry: "Skriv en journalanteckning",
+                    mood: "Humör idag (1=Dåligt, 5=Toppen):",
+                    moodValue: "Valt humör:",
+                    howAreYou: "Hur mår du idag?",
+                    placeholder: "Beskriv dina symptom, din energi, eller andra tankar...",
+
+                    trackMetrics: "🧪 Spåra Journalvärden",
+                    dateOfTest: "Datum för prov:",
+                    metricValue: "Värde (Ex: ALAT, Kolesterol):",
+                    metricResult: "Resultat:",
+                    metricUnit: "Enhet (Ex: $\\mu$mol/L):",
+                    placeholderMetricName: "T.ex. ALAT, Bilirubin",
+                    placeholderMetricValue: "T.ex. 0.62",
+                    placeholderMetricUnit: "T.ex. $\\mu$mol/L, mmol/L",
+
+                    trend: "📉 Journalvärdestrender",
+                    trendDesc: "Välj ett spårat värde ovan för att se hur det förändrats över tid.",
+                    myNotesAndMetrics: "Mina anteckningar och Värden",
+                    loggedMetrics: "Loggade Journalvärden",
+                    journalEntriesLog: "Journalanteckningar", // Lokaliserad journal log rubrik
+                    filterMood: "Filtrera Humör:",
+                    searchText: "Sök text:",
+                    searchPlaceholder: "Sök ord i texten...",
+                    noFilterMatch: "Inga anteckningar matchar filtret.",
+                    noEntriesYet: "Inga anteckningar än.",
+                    noMetrics: "Inga journalvärden loggade än.",
+                    dataTools: "🛠️ Dataverktyg",
+                    utilityDesc: "Använd verktygen för att säkerhetskopiera din data eller rensa din logg."
+                }
+            },
+            en: {
+                // Generella
+                appTitle: "Liver Diet",
+                today: "Today",
+                prompts: {
+                    unlockPassword: "Enter password to unlock dangerous features:",
+                    confirmReplaceData: "Are you sure you want to replace your current data with the imported file?",
+                    confirmResetData: "WARNING: Are you absolutely sure you want to reset all data? This cannot be undone!",
+                    invalidName: "Please enter a unique name for the food item.",
+                    metricValidation: "Please fill in date, value, result, and unit."
+                },
+                alerts: {
+                    unlocked: "App is unlocked!",
+                    wrongPassword: "Wrong password.",
+                    locked: "App is locked.",
+                    customFoodSuccess: (name) => `The food item "${name}" has been added and is now available in the list!`,
+                    importError: "Error: File does not appear to be a valid Liver Diet backup file.",
+                    jsonError: "Import error: Could not read file as JSON. Check the file format."
+                },
+                feedback: {
+                    welcome: "Welcome!",
+                    logFirstMeal: (date) => `Log your first meal to get a liver health report for ${date}.`,
+                    excellent: "Excellent! ✅",
+                    excellentMessage: "Your intake consists of 100% liver-friendly calories. Continue eating nutritiously and avoid processed foods!",
+                    good: "Very Good! 🌟",
+                    goodMessage: (percentage, kcal, list) => `Only ${percentage}% of your caloric intake is non-liver-friendly. You're doing great! Try replacing these: <br>${list}`,
+                    warning: "Review your diet! ⚠️",
+                    warningMessage: (percentage, kcal, list) => `${percentage}% of your intake (${kcal} kcal) comes from foods that are heavy on the liver. Focus on reducing the following: <br>${list}`,
+                },
+                buttons: {
+                    locked: "Locked",
+                    unlocked: "Unlocked",
+                    saveGoals: "Save Goals",
+                    setGoal: "Set Goal",
+                    saveEntry: "💾 Save Entry",
+                    saveMetric: "+ Save Metric",
+                    saveCustomFood: "+ Save Food", // Ny dedikerad knapp
+                    export: "⬇️ Export Data",
+                    import: "⬆️ Import Data",
+                    reset: "🗑️ Reset All Data",
+                },
+                // NYTT: Navigation Titles
+                nav: {
+                    meals: "Meals",
+                    overview: "Overview",
+                    journal: "Journal & Tools"
+                },
+                // Meal Form
+                h2AddMeal: "Add Meal",
+                labelMealType: "Meal:",
+                labelFoodItem: "Food Item:",
+                labelAmount: "Amount:",
+                h3CalculatedIntake: "Calculated Intake:",
+                buttonAddMeal: "Add",
+                h2AddCustomFood: "🥩 Add Custom Food",
+                labelProtein: "Protein (g/100g):",
+                labelFat: "Fat (g/100g):",
+                labelCarbs: "Carbs (g/100g):",
+                labelCalories: "Calories (kcal/100g):",
+                labelLiverFriendly: "Liver Friendly:",
+                customFoodFriendlyDesc: "Check if the food supports liver health.",
+                h2LiverHealthReport: "🎯 Liver Health Report",
+                mealTableTitle: "Meals for",
+                // Meal Types
+                mealTypes: {
+                    "Frukost": "Breakfast",
+                    "Lunch": "Lunch",
+                    "Mellanmål": "Snack",
+                    "Middag": "Dinner"
+                },
+                // Units
+                units: [
+                    { value: "100", text: "grams (g)" },
+                    { value: "100", text: "dl (approx. 1 dl = 100g)" },
+                    { value: "50", text: "pcs (approx. 50g/pc)" },
+                    { value: "1", text: "ml (pinch, approx. 1g/ml)" },
+                    { value: "5", text: "tsp (teaspoon, approx. 5g/tsp)" },
+                    { value: "15", text: "tbsp (tablespoon, approx. 15g/tbsp)" },
+                    { value: "50", text: "0.5 dl (approx. 50g)" }
+                ],
+                // Matöversättningar (Svenskt namn som nyckel)
+                foodNames: {
+                    "Avokado": "Avocado",
+                    "Blåbär": "Blueberries",
+                    "Broccoli": "Broccoli",
+                    "Brunt ris": "Brown rice",
+                    "Fullkornsbröd": "Whole grain bread",
+                    "Kycklingbröst (grillad)": "Chicken breast (grilled)",
+                    "Lax (ugnsbakad)": "Salmon (baked)",
+                    "Spenat": "Spinach",
+                    "Morötter": "Carrots",
+                    "Havregryn": "Oatmeal",
+                    "Quinoa": "Quinoa",
+                    "Valnötter": "Walnuts",
+                    "Mandlar": "Almonds",
+                    "Torsk (filé)": "Cod (fillet)",
+                    "Ägg (kokt)": "Egg (boiled)",
+                    "Olivolja (extra virgin)": "Olive oil (extra virgin)",
+                    "Kaffe (svart)": "Coffee (black)",
+                    "Grapefrukt": "Grapefruit",
+                    "Linser (kokta)": "Lentils (cooked)",
+                    "Kikärtor (kokta)": "Chickpeas (cooked)",
+                    "Kalkonkött (magert)": "Turkey meat (lean)",
+                    "Fet yoghurt (osötad)": "Fat yogurt (unsweetened)",
+                    "Äpple": "Apple",
+                    "Apelsin": "Orange",
+                    "Jordgubbar": "Strawberries",
+                    "Sötpotatis (bakad)": "Sweet potato (baked)",
+                    "Grönkål": "Kale",
+                    "Lök": "Onion",
+                    "Nötkött (fettrik)": "Beef (fatty)",
+                    "Läsk (sötad)": "Soda (sweetened)",
+                    "Vitt bröd": "White bread",
+                    "Pommes frites": "French fries",
+                    "Godis (gelé)": "Candy (jelly)",
+                    "Bacon": "Bacon",
+                    "Korv (med hög fetthalt)": "Sausage (high fat)",
+                    "Raffinerat socker": "Refined sugar",
+                    "Energidryck (sötad)": "Energy drink (sweetened)",
+                    "Kex (söta)": "Biscuits (sweet)"
+                },
+                // Tabellrubriker
+                tableHeaders: {
+                    MealType: "Meal",
+                    FoodItem: "Food Item",
+                    Amount: "Amount",
+                    Protein: "Protein",
+                    Fat: "Fat",
+                    Carbs: "Carbs",
+                    Calories: "Calories",
+                    LiverFriendly: "Liver Friendly",
+                    DeleteMeal: "Delete",
+                },
+                // NYTT: Overview Titles
+                overview: {
+                    setGoals: "🏆 Set Daily Goals",
+                    goalCalories: "Calories (kcal):",
+                    goalProtein: "Protein (g):",
+                    goalFat: "Fat (g):",
+                    goalCarbs: "Carbs (g):",
+                    placeholderCalories: "2000",
+                    placeholderProtein: "100",
+                    placeholderFat: "60",
+                    placeholderCarbs: "250",
+
+                    hydration: "💧 Hydration",
+                    intakeToday: "Intake today:",
+                    goal: "Goal:",
+                    placeholderWaterGoal: "Set goal (ml)",
+
+                    activity: "🏃‍♀️ Activity",
+                    trainingToday: "Activity today:",
+                    placeholderActivityGoal: "Set goal (min)",
+
+                    totalProtein: "Total Protein",
+                    totalFat: "Total Fat",
+                    totalCarbs: "Total Carbs",
+                    totalCalories: "Total Calories",
+
+                    dailyGoalStatus: "Daily Goal Status",
+                    dailyGoalStatusDesc: "Compare your daily performance against your set goals.",
+                    calDistributionMacro: "Calorie Distribution from Macronutrients",
+                    calDistributionLiver: "Calorie Distribution: Liver Friendly vs. Not Liver Friendly",
+                    calorieTrend: "Calorie Trend (Last 7 Days)",
+                    calorieTrendDesc: "Shows total daily caloric intake based on logged meals, compared to your goal.",
+                    activityTrend: "Activity Trend (Last 7 Days)",
+                    activityTrendDesc: "Shows logged exercise minutes over the last 7 days, compared to your goal."
+                },
+                // NYTT: Journal Titles & Labels
+                journal: {
+                    writeEntry: "Write a Journal Entry",
+                    mood: "Mood today (1=Bad, 5=Great):",
+                    moodValue: "Selected Mood:",
+                    howAreYou: "How are you feeling today?",
+                    placeholder: "Describe your symptoms, energy, or other thoughts...",
+
+                    trackMetrics: "🧪 Track Health Metrics",
+                    dateOfTest: "Date of test:",
+                    metricValue: "Metric (Ex: ALT, Cholesterol):",
+                    metricResult: "Result:",
+                    metricUnit: "Unit (Ex: $\\mu$mol/L):",
+                    placeholderMetricName: "E.g. ALT, Bilirubin",
+                    placeholderMetricValue: "E.g. 0.62",
+                    placeholderMetricUnit: "E.g. $\\mu$mol/L, mmol/L",
+
+                    trend: "📉 Health Metric Trends",
+                    trendDesc: "Select a tracked metric above to see how it has changed over time.",
+                    myNotesAndMetrics: "My Notes and Metrics",
+                    loggedMetrics: "Logged Health Metrics",
+                    journalEntriesLog: "Journal Entries", // Lokaliserad journal log rubrik
+                    filterMood: "Filter Mood:",
+                    searchText: "Search Text:",
+                    searchPlaceholder: "Search words in the text...",
+                    noFilterMatch: "No entries match the filter.",
+                    noEntriesYet: "No entries yet.",
+                    noMetrics: "No health metrics logged yet.",
+                    dataTools: "🛠️ Data Tools",
+                    utilityDesc: "Use the tools to back up your data or clear your log."
+                }
+            },
+            es: {
+                // Generella
+                appTitle: "Dieta Hepática",
+                today: "Hoy",
+                prompts: {
+                    unlockPassword: "Ingrese la contraseña para desbloquear funciones peligrosas:",
+                    confirmReplaceData: "¿Está seguro de que desea reemplazar sus datos actuales con el archivo importado?",
+                    confirmResetData: "ADVERTENCIA: ¿Está absolutamente seguro de que desea restablecer todos los datos? ¡Esto no se puede deshacer!",
+                    invalidName: "Por favor, ingrese un nombre único para el alimento.",
+                    metricValidation: "Por favor, rellene fecha, valor, resultado y unidad."
+                },
+                alerts: {
+                    unlocked: "¡Aplicación desbloqueada!",
+                    wrongPassword: "Contraseña incorrecta.",
+                    locked: "Aplicación bloqueada.",
+                    customFoodSuccess: (name) => `¡El alimento "${name}" ha sido añadido y ya está disponible en la lista!`,
+                    importError: "Error: El archivo no parece ser un archivo de copia de seguridad de Dieta Hepática válido.",
+                    jsonError: "Error de importación: No se pudo leer el archivo como JSON. Verifique el formato del archivo."
+                },
+                feedback: {
+                    welcome: "¡Bienvenido!",
+                    logFirstMeal: (date) => `Registre su primera comida para obtener un informe de salud hepática para ${date}.`,
+                    excellent: "¡Excelente! ✅",
+                    excellentMessage: "Su ingesta consiste en un 100% de calorías amigables con el hígado. ¡Siga comiendo nutritivamente y evite los alimentos procesados!",
+                    good: "¡Muy Bien! 🌟",
+                    goodMessage: (percentage, kcal, list) => `Solo el ${percentage}% de su ingesta calórica no es amigable con el hígado. ¡Le está yendo bien! Intente reemplazar estos: <br>${list}`,
+                    warning: "¡Revise su dieta! ⚠️",
+                    warningMessage: (percentage, kcal, list) => `El ${percentage}% de su ingesta (${kcal} kcal) proviene de alimentos que son pesados para el hígado. Concéntrese en reducir lo siguiente: <br>${list}`,
+                },
+                buttons: {
+                    locked: "Bloqueado",
+                    unlocked: "Desbloqueado",
+                    saveGoals: "Guardar Metas",
+                    setGoal: "Establecer Meta",
+                    saveEntry: "💾 Guardar Entrada",
+                    saveMetric: "+ Guardar Valor",
+                    saveCustomFood: "+ Guardar Alimento", // Ny dedikerad knapp
+                    export: "⬇️ Exportar Datos",
+                    import: "⬆️ Importar Datos",
+                    reset: "🗑️ Restablecer Datos",
+                },
+                // NYTT: Navigation Titles
+                nav: {
+                    meals: "Comidas",
+                    overview: "Resumen",
+                    journal: "Diario y Herramientas"
+                },
+                // Meal Form
+                h2AddMeal: "Añadir Comida",
+                labelMealType: "Tipo de Comida:",
+                labelFoodItem: "Alimento:",
+                labelAmount: "Cantidad:",
+                h3CalculatedIntake: "Ingesta Calculada:",
+                buttonAddMeal: "Añadir",
+                h2AddCustomFood: "🥩 Añadir Alimento Personalizado",
+                labelProtein: "Proteína (g/100g):",
+                labelFat: "Grasa (g/100g):",
+                labelCarbs: "Carbohidratos (g/100g):",
+                labelCalories: "Calorías (kcal/100g):",
+                labelLiverFriendly: "Amigable con el Hígado:",
+                customFoodFriendlyDesc: "Marque si el alimento apoya la salud hepática.",
+                h2LiverHealthReport: "🎯 Informe de Salud Hepática",
+                mealTableTitle: "Comidas de",
+                // Meal Types
+                mealTypes: {
+                    "Frukost": "Desayuno",
+                    "Lunch": "Almuerzo",
+                    "Mellanmål": "Merienda",
+                    "Middag": "Cena"
+                },
+                // Units
+                units: [
+                    { value: "100", text: "gramos (g)" },
+                    { value: "100", text: "dl (aprox. 1 dl = 100g)" },
+                    { value: "50", text: "ud (aprox. 50g/ud)" },
+                    { value: "1", text: "ml (pizca, aprox. 1g/ml)" },
+                    { value: "5", text: "cdta (cucharadita, aprox. 5g/cdta)" },
+                    { value: "15", text: "cda (cucharada, aprox. 15g/cda)" },
+                    { value: "50", text: "0.5 dl (aprox. 50g)" }
+                ],
+                // Matöversättningar (Svenskt namn som nyckel)
+                foodNames: {
+                    "Avokado": "Aguacate",
+                    "Blåbär": "Arándanos",
+                    "Broccoli": "Brócoli",
+                    "Brunt ris": "Arroz integral",
+                    "Fullkornsbröd": "Pan integral",
+                    "Kycklingbröst (grillad)": "Pechuga de pollo (a la parrilla)",
+                    "Lax (ugnsbakad)": "Salmón (al horno)",
+                    "Spenat": "Espinacas",
+                    "Morötter": "Zanahorias",
+                    "Havregryn": "Avena",
+                    "Quinoa": "Quinoa",
+                    "Valnötter": "Nueces",
+                    "Mandlar": "Almendras",
+                    "Torsk (filé)": "Bacalao (filete)",
+                    "Ägg (kokt)": "Huevo (cocido)",
+                    "Olivolja (extra virgin)": "Aceite de oliva (virgen extra)",
+                    "Kaffe (svart)": "Café (negro)",
+                    "Grapefrukt": "Pomelo",
+                    "Linser (kokta)": "Lentejas (cocidas)",
+                    "Kikärtor (kokta)": "Garbanzos (cocidos)",
+                    "Kalkonkött (magert)": "Carne de pavo (magra)",
+                    "Fet yoghurt (osötad)": "Yogur entero (sin azúcar)",
+                    "Äpple": "Manzana",
+                    "Apelsin": "Naranja",
+                    "Jordgubbar": "Fresas",
+                    "Sötpotatis (bakad)": "Batata (asada)",
+                    "Grönkål": "Col rizada",
+                    "Lök": "Cebolla",
+                    "Nötkött (fettrik)": "Carne de res (grasosa)",
+                    "Läsk (sötad)": "Refresco (endulzado)",
+                    "Vitt bröd": "Pan blanco",
+                    "Pommes frites": "Papas fritas",
+                    "Godis (gelé)": "Golosinas (gelatina)",
+                    "Bacon": "Tocino",
+                    "Korv (med hög fetthalt)": "Salchicha (alta en grasa)",
+                    "Raffinerat socker": "Azúcar refinada",
+                    "Energidryck (sötad)": "Bebida energética (endulzada)",
+                    "Kex (söta)": "Galletas (dulces)"
+                },
+                // Tabellrubriker
+                tableHeaders: {
+                    MealType: "Comida",
+                    FoodItem: "Alimento",
+                    Amount: "Cantidad",
+                    Protein: "Proteína",
+                    Fat: "Grasa",
+                    Carbs: "Carbohidratos",
+                    Calories: "Calorías",
+                    LiverFriendly: "Amigable",
+                    DeleteMeal: "Eliminar",
+                },
+                // NYTT: Overview Titles
+                overview: {
+                    setGoals: "🏆 Establecer Metas Diarias",
+                    goalCalories: "Calorías (kcal):",
+                    goalProtein: "Proteína (g):",
+                    goalFat: "Grasa (g):",
+                    goalCarbs: "Carbohidratos (g):",
+                    placeholderCalories: "2000",
+                    placeholderProtein: "100",
+                    placeholderFat: "60",
+                    placeholderCarbs: "250",
+
+                    hydration: "💧 Hidratación",
+                    intakeToday: "Ingesta hoy:",
+                    goal: "Meta:",
+                    placeholderWaterGoal: "Establecer meta (ml)",
+
+                    activity: "🏃‍♀️ Actividad",
+                    trainingToday: "Actividad hoy:",
+                    placeholderActivityGoal: "Establecer meta (min)",
+
+                    totalProtein: "Proteína Total",
+                    totalFat: "Grasa Total",
+                    totalCarbs: "Carbohidratos Totales",
+                    totalCalories: "Calorías Totales",
+
+                    dailyGoalStatus: "Estado de Meta Diaria",
+                    dailyGoalStatusDesc: "Compare su rendimiento diario con sus metas establecidas.",
+                    calDistributionMacro: "Distribución de Calorías por Macronutrientes",
+                    calDistributionLiver: "Distribución de Calorías: Amigable vs. No Amigable con el Hígado",
+                    calorieTrend: "Tendencia de Calorías (Últimos 7 Días)",
+                    calorieTrendDesc: "Muestra la ingesta calórica diaria total basada en las comidas registradas, comparada con su meta.",
+                    activityTrend: "Tendencia de Actividad (Últimos 7 Días)",
+                    activityTrendDesc: "Muestra los minutos de ejercicio registrados durante los últimos 7 días, comparados con su meta."
+                },
+                // NYTT: Journal Titles & Labels
+                journal: {
+                    writeEntry: "Escribir una Entrada en el Diario",
+                    mood: "Ánimo hoy (1=Mal, 5=Excelente):",
+                    moodValue: "Ánimo Seleccionado:",
+                    howAreYou: "¿Cómo se siente hoy?",
+                    placeholder: "Describa sus síntomas, energía u otros pensamientos...",
+
+                    trackMetrics: "🧪 Rastrear Valores de Salud",
+                    dateOfTest: "Fecha de la prueba:",
+                    metricValue: "Valor (Ej: ALT, Colesterol):",
+                    metricResult: "Resultado:",
+                    metricUnit: "Unidad (Ej: $\\mu$mol/L):",
+                    placeholderMetricName: "Ej. ALT, Bilirubina",
+                    placeholderMetricValue: "Ej. 0.62",
+                    placeholderMetricUnit: "Ej. $\\mu$mol/L, mmol/L",
+
+                    trend: "📉 Tendencias de Valores de Salud",
+                    trendDesc: "Seleccione un valor rastreado arriba para ver cómo ha cambiado con el tiempo.",
+                    myNotesAndMetrics: "Mis Notas y Valores",
+                    loggedMetrics: "Valores de Salud Registrados",
+                    journalEntriesLog: "Entradas del Diario", // Lokaliserad journal log rubrik
+                    filterMood: "Filtrar Ánimo:",
+                    searchText: "Buscar Texto:",
+                    searchPlaceholder: "Buscar palabras en el texto...",
+                    noFilterMatch: "No hay entradas que coincidan con el filtro.",
+                    noEntriesYet: "Aún no hay entradas.",
+                    noMetrics: "No se han registrado valores de salud aún.",
+                    dataTools: "🛠️ Herramientas de Datos",
+                    utilityDesc: "Use las herramientas para hacer una copia de seguridad de sus datos o borrar su registro."
+                }
+            },
+            it: {
+                // Generella
+                appTitle: "Dieta Epatica",
+                today: "Oggi",
+                actions: {
+                    unlockPassword: "Inserisci la password per sbloccare le funzioni pericolose:",
+                    confirmReplaceData: "Sei sicuro di voler sostituire i tuoi dati attuali con il file importato?",
+                    confirmResetData: "ATTENZIONE: Sei assolutamente sicuro di voler resettare tutti i dati? Questa azione non può essere annullata!",
+                    invalidName: "Si prega di inserire un nome univoco per l'alimento.",
+                    metricValidation: "Si prega di compilare data, valore, risultato e unità."
+                },
+                alerts: {
+                    unlocked: "App sbloccata!",
+                    wrongPassword: "Password errata.",
+                    locked: "App bloccata.",
+                    customFoodSuccess: (name) => `L'alimento "${name}" è stato aggiunto ed è ora disponibile nell'elenco!`,
+                    importError: "Errore: Il file non sembra essere un file di backup valido per la Dieta Epatica.",
+                    jsonError: "Errore di importazione: Impossibile leggere il file come JSON. Controlla il formato del file."
+                },
+                feedback: {
+                    welcome: "Benvenuto!",
+                    logFirstMeal: (date) => `Registra il tuo primo pasto per ottenere un rapporto sulla salute del fegato per ${date}.`,
+                    excellent: "Eccellente! ✅",
+                    excellentMessage: "La tua assunzione consiste nel 100% di calorie amiche del fegato. Continua a mangiare nutriente ed evita i cibi processati!",
+                    good: "Molto Bene! 🌟",
+                    goodMessage: (percentage, kcal, list) => `Solo il ${percentage}% del tuo apporto calorico non è amico del fegato. Stai andando bene! Prova a sostituire questi: <br>${list}`,
+                    warning: "Rivedi la tua dieta! ⚠️",
+                    warningMessage: (percentage, kcal, list) => `Il ${percentage}% del tuo apporto (${kcal} kcal) proviene da alimenti pesanti per il fegato. Concentrati sulla riduzione di quanto segue: <br>${list}`,
+                },
+                buttons: {
+                    locked: "Bloccato",
+                    unlocked: "Sbloccato",
+                    saveGoals: "Salva Obiettivi",
+                    setGoal: "Imposta Obiettivo",
+                    saveEntry: "💾 Salva Voce",
+                    saveMetric: "+ Salva Valore",
+                    saveCustomFood: "+ Salva Alimento", // Ny dedikerad knapp
+                    export: "⬇️ Esporta Dati",
+                    import: "⬆️ Importa Dati",
+                    reset: "🗑️ Resetta Tutti i Dati",
+                },
+                // NYTT: Navigation Titles
+                nav: {
+                    meals: "Pasti",
+                    overview: "Panoramica",
+                    journal: "Diario e Strumenti"
+                },
+                // Meal Form
+                h2AddMeal: "Aggiungi Pasto",
+                labelMealType: "Pasto:",
+                labelFoodItem: "Alimento:",
+                labelAmount: "Quantità:",
+                h3CalculatedIntake: "Assunzione Calcolata:",
+                buttonAddMeal: "Aggiungi",
+                h2AddCustomFood: "🥩 Aggiungi Alimento Personalizzato",
+                labelProtein: "Proteine (g/100g):",
+                labelFat: "Grassi (g/100g):",
+                labelCarbs: "Carboidrati (g/100g):",
+                labelCalories: "Calorie (kcal/100g):",
+                labelLiverFriendly: "Amico del Fegato:",
+                customFoodFriendlyDesc: "Seleziona se l'alimento supporta la salute del fegato.",
+                h2LiverHealthReport: "🎯 Rapporto Salute del Fegato",
+                mealTableTitle: "Pasti per",
+                // Meal Types
+                mealTypes: {
+                    "Frukost": "Colazione",
+                    "Lunch": "Pranzo",
+                    "Mellanmål": "Spuntino",
+                    "Middag": "Cena"
+                },
+                // Units
+                units: [
+                    { value: "100", text: "grammi (g)" },
+                    { value: "100", text: "dl (circa 1 dl = 100g)" },
+                    { value: "50", text: "pz (circa 50g/pz)" },
+                    { value: "1", text: "ml (pizzico, circa 1g/ml)" },
+                    { value: "5", text: "cucchiaino (circa 5g/cucchiaino)" },
+                    { value: "15", text: "cucchiaio (circa 15g/cucchiaio)" },
+                    { value: "50", text: "0.5 dl (circa 50g)" }
+                ],
+                // Matöversättningar (Svenskt namn som nyckel)
+                foodNames: {
+                    "Avokado": "Avocado",
+                    "Blåbär": "Mirtilli",
+                    "Broccoli": "Broccoli",
+                    "Brunt ris": "Riso integrale",
+                    "Fullkornsbröd": "Pane integrale",
+                    "Kycklingbröst (grillad)": "Petto di pollo (alla griglia)",
+                    "Lax (ugnsbakad)": "Salmone (al forno)",
+                    "Spenat": "Spinaci",
+                    "Morötter": "Carote",
+                    "Havregryn": "Fiocchi d'avena",
+                    "Quinoa": "Quinoa",
+                    "Valnötter": "Noci",
+                    "Mandlar": "Mandorle",
+                    "Torsk (filé)": "Merluzzo (filetto)",
+                    "Ägg (kokt)": "Uovo (sodo)",
+                    "Olivolja (extra virgin)": "Olio d'oliva (extra vergine)",
+                    "Kaffe (svart)": "Caffè (nero)",
+                    "Grapefrukt": "Pompelmo",
+                    "Linser (kokta)": "Lenticchie (cotte)",
+                    "Kikärtor (kokta)": "Ceci (cotti)",
+                    "Kalkonkött (magert)": "Carne di tacchino (magra)",
+                    "Fet yoghurt (osötad)": "Yogurt intero (non zuccherato)",
+                    "Äpple": "Mela",
+                    "Apelsin": "Arancia",
+                    "Jordgubbar": "Fragole",
+                    "Sötpotatis (bakad)": "Patata dolce (al forno)",
+                    "Grönkål": "Cavolo nero",
+                    "Lök": "Cipolla",
+                    "Nötkött (fettrik)": "Carne di manzo (grassa)",
+                    "Läsk (sötad)": "Bibita (zuccherata)",
+                    "Vitt bröd": "Pane bianco",
+                    "Pommes frites": "Patatine fritte",
+                    "Godis (gelé)": "Caramelle (gelatina)",
+                    "Bacon": "Pancetta",
+                    "Korv (med hög fetthalt)": "Salsiccia (alto contenuto di grassi)",
+                    "Raffinerat socker": "Zucchero raffinato",
+                    "Energidryck (sötad)": "Energy drink (zuccherata)",
+                    "Kex (söta)": "Biscotti (dolci)"
+                },
+                // Tabellrubriker
+                tableHeaders: {
+                    MealType: "Pasto",
+                    FoodItem: "Alimento",
+                    Amount: "Quantità",
+                    Protein: "Proteine",
+                    Fat: "Grassi",
+                    Carbs: "Carboidrati",
+                    Calories: "Calorie",
+                    LiverFriendly: "Amico",
+                    DeleteMeal: "Elimina",
+                },
+                // NYTT: Overview Titles
+                overview: {
+                    setGoals: "🏆 Imposta Obiettivi Giornalieri",
+                    goalCalories: "Calorie (kcal):",
+                    goalProtein: "Proteine (g):",
+                    goalFat: "Grassi (g):",
+                    goalCarbs: "Carboidrati (g):",
+                    placeholderCalories: "2000",
+                    placeholderProtein: "100",
+                    placeholderFat: "60",
+                    placeholderCarbs: "250",
+
+                    hydration: "💧 Idratazione",
+                    intakeToday: "Assunzione oggi:",
+                    goal: "Obiettivo:",
+                    placeholderWaterGoal: "Imposta obiettivo (ml)",
+
+                    activity: "🏃‍♀️ Attività",
+                    trainingToday: "Attività oggi:",
+                    placeholderActivityGoal: "Imposta obiettivo (min)",
+
+                    totalProtein: "Proteine Totali",
+                    totalFat: "Grassi Totali",
+                    totalCarbs: "Carboidrati Totali",
+                    totalCalories: "Calorie Totali",
+
+                    dailyGoalStatus: "Stato Obiettivo Giornaliero",
+                    dailyGoalStatusDesc: "Confronta la tua performance giornaliera con gli obiettivi impostati.",
+                    calDistributionMacro: "Distribuzione Calorie da Macronutrienti",
+                    calDistributionLiver: "Distribuzione Calorie: Amico del Fegato vs. Non Amico del Fegato",
+                    calorieTrend: "Andamento Calorie (Ultimi 7 Giorni)",
+                    calorieTrendDesc: "Mostra l'assunzione calorica giornaliera totale basata sui pasti registrati, rispetto al tuo obiettivo.",
+                    activityTrend: "Andamento Attività (Ultimi 7 Giorni)",
+                    activityTrendDesc: "Mostra i minuti di esercizio registrati negli ultimi 7 giorni, rispetto al tuo obiettivo."
+                },
+                // NYTT: Journal Titles & Labels
+                journal: {
+                    writeEntry: "Scrivi una Voce di Diario",
+                    mood: "Umore oggi (1=Male, 5=Ottimo):",
+                    moodValue: "Umore Selezionato:",
+                    howAreYou: "Come ti senti oggi?",
+                    placeholder: "Descrivi i tuoi sintomi, energia o altri pens thoughts...",
+
+                    trackMetrics: "🧪 Traccia i Valori di Salute",
+                    dateOfTest: "Data del test:",
+                    metricValue: "Valore (Es: ALT, Colesterol):",
+                    metricResult: "Risultato:",
+                    metricUnit: "Unità (Es: $\\mu$mol/L):",
+                    placeholderMetricName: "Es. ALT, Bilirubina",
+                    placeholderMetricValue: "Es. 0.62",
+                    placeholderMetricUnit: "Es. $\\mu$mol/L, mmol/L",
+
+                    trend: "📉 Tendenze dei Valori di Salute",
+                    trendDesc: "Selecciona un valor tracciado arriba para ver cómo ha cambiado con el tiempo.",
+                    myNotesAndMetrics: "Le Mie Note e Valori",
+                    loggedMetrics: "Valori di Salute Registrati",
+                    journalEntriesLog: "Voci di Diario", // Lokaliserad journal log rubrik
+                    filterMood: "Filtra Umore:",
+                    searchText: "Cerca Testo:",
+                    searchPlaceholder: "Cerca parole nel testo...",
+                    noFilterMatch: "Nessuna voce corrisponde al filtro.",
+                    noEntriesYet: "Ancora nessuna voce.",
+                    noMetrics: "Ancora nessun valore di salute registrato.",
+                    dataTools: "🛠️ Strumenti Dati",
+                    utilityDesc: "Usa gli strumenti per eseguire il backup dei tuoi dati o cancellare il registro."
+                }
+            }
+        };
+
+        // Global referens till det aktuella språket.
+        var T = Translations[currentLang];
+        // --- SLUT LOKALISERING ---
+
+
+        // Funktion för att byta språk och uppdatera UI
+        function setLanguage(langCode) {
+            currentLang = langCode;
+            localStorage.setItem('appLanguage', langCode);
+            T = Translations[currentLang]; // Uppdatera globala T-referensen
+            updateStaticUI();
+            initializeMealInputs(); // Fyll i måltidslistor på nytt språk
+            populateFoodSelect(); // Uppdatera livsmedelsrullistan
+            updateUI(); // Uppdatera resten av gränssnittet
+        }
+
+        // Funktion för att uppdatera statiska UI-element efter språkbyte
+        function updateStaticUI() {
+            const T = Translations[currentLang];
+
+            // --- SIDOMENY OCH NAVIGERING ---
+            document.querySelector('.sidebar h1').textContent = `🌿 ${T.appTitle}`;
+            // Fix: Använd ID:n för att uppdatera navigationsspan-elementen
+            document.getElementById("navMeals").textContent = T.nav.meals;
+            document.getElementById("navOverview").textContent = T.nav.overview;
+            document.getElementById("navJournal").textContent = T.nav.journal;
+
+            // --- MÅLTIDSSIDA (STATISK TEXT) ---
+            document.getElementById("h2AddMeal").textContent = T.h2AddMeal;
+            document.getElementById("labelMealType").textContent = T.labelMealType;
+            document.getElementById("labelFoodSelect").textContent = T.labelFoodItem;
+            document.getElementById("labelAmountValue").textContent = T.labelAmount;
+            document.getElementById("h3CalculatedIntake").textContent = T.h3CalculatedIntake;
+            document.getElementById("buttonAddMeal").innerHTML = `➕ ${T.buttonAddMeal}`;
+
+            document.getElementById("h2AddCustomFood").textContent = T.h2AddCustomFood;
+            document.getElementById("labelProtein").textContent = T.labelProtein;
+            document.getElementById("labelFat").textContent = T.labelFat;
+            document.getElementById("labelCarbs").textContent = T.labelCarbs;
+            document.getElementById("labelCalories").textContent = T.labelCalories;
+            document.getElementById("labelLiverFriendly").textContent = T.labelLiverFriendly;
+            document.getElementById("customFoodFriendlyDesc").textContent = T.customFoodFriendlyDesc;
+            document.getElementById("saveCustomFoodButton").textContent = T.buttons.saveCustomFood;
+
+            document.getElementById("h2LiverHealthReport").textContent = T.h2LiverHealthReport;
+            document.getElementById("h2MealsForDate").textContent = T.mealTableTitle; // Rubrik för måltidstabell
+
+            // Tabellrubriker
+            document.getElementById("thMealType").textContent = T.tableHeaders.MealType;
+            document.getElementById("thFoodItem").textContent = T.tableHeaders.FoodItem;
+            document.getElementById("thAmount").textContent = T.tableHeaders.Amount;
+            document.getElementById("thProtein").textContent = T.tableHeaders.Protein;
+            document.getElementById("thFat").textContent = T.tableHeaders.Fat;
+            document.getElementById("thCarbs").textContent = T.tableHeaders.Carbs;
+            document.getElementById("thCalories").textContent = T.tableHeaders.Calories;
+            document.getElementById("thLiverFriendly").textContent = T.tableHeaders.LiverFriendly;
+            document.getElementById("thDeleteMeal").textContent = T.tableHeaders.DeleteMeal;
+
+            // --- ÖVERSIKTSSIDA (STATISK TEXT OCH PLATSHÅLLARE) ---
+            // Målhantering
+            document.getElementById('h2SetDailyGoals').textContent = T.overview.setGoals;
+            document.getElementById('labelGoalCalories').textContent = T.overview.goalCalories;
+            document.getElementById('labelGoalProtein').textContent = T.overview.goalProtein;
+            document.getElementById('labelGoalFat').textContent = T.overview.goalFat;
+            document.getElementById('labelGoalCarbs').textContent = T.overview.goalCarbs;
+            document.getElementById('saveGoalsButton').textContent = T.buttons.saveGoals;
+
+            document.getElementById('goalCalories').placeholder = T.overview.placeholderCalories;
+            document.getElementById('goalProtein').placeholder = T.overview.placeholderProtein;
+            document.getElementById('goalFat').placeholder = T.overview.placeholderFat;
+            document.getElementById('goalCarbs').placeholder = T.overview.placeholderCarbs;
+
+            // Hydrering
+            document.getElementById('h2Hydration').textContent = T.overview.hydration;
+            // h3-texterna uppdateras dynamiskt i updateWaterDisplay, vi uppdaterar platshållaren här
+            document.getElementById('waterGoalInput').placeholder = T.overview.placeholderWaterGoal;
+            document.getElementById('setWaterGoalButton').textContent = T.buttons.setGoal;
+
+            // Aktivitet
+            document.getElementById('h2Activity').textContent = T.overview.activity;
+            // h3-texterna uppdateras dynamiskt i updateActivityDisplay, vi uppdaterar platshållaren här
+            document.getElementById('activityGoalInput').placeholder = T.overview.placeholderActivityGoal;
+            document.getElementById('setActivityGoalButton').textContent = T.buttons.setGoal;
+
+            // Statistik kort rubriker
+            document.getElementById('h3TotalProtein').textContent = T.overview.totalProtein;
+            document.getElementById('h3TotalFat').textContent = T.overview.totalFat;
+            document.getElementById('h3TotalCarbs').textContent = T.overview.totalCarbs;
+            document.getElementById('h3TotalCalories').textContent = T.overview.totalCalories;
+
+            // Diagram rubriker och beskrivningar
+            document.getElementById('h2DailyGoalStatus').textContent = T.overview.dailyGoalStatus;
+            document.getElementById('pDailyGoalStatusDesc').textContent = T.overview.dailyGoalStatusDesc;
+            document.getElementById('h2CalDistributionMacro').textContent = T.overview.calDistributionMacro;
+            document.getElementById('h2CalDistributionLiver').textContent = T.overview.calDistributionLiver;
+            document.getElementById('h2CalorieTrend').textContent = T.overview.calorieTrend;
+            document.getElementById('pCalorieTrendDesc').textContent = T.overview.calorieTrendDesc;
+            document.getElementById('h2ActivityTrend').textContent = T.overview.activityTrend;
+            document.getElementById('pActivityTrendDesc').textContent = T.overview.activityTrendDesc;
+
+            // --- JOURNAL SIDA (STATISK TEXT OCH PLATSHÅLLARE) ---
+            // Journalanteckning
+            document.getElementById('h2WriteJournalEntry').textContent = T.journal.writeEntry;
+            document.getElementById('labelMood').textContent = T.journal.mood;
+            // Uppdatera humör-etiketten korrekt utan att förlora span-värdet
+            const moodValueText = document.getElementById("moodValueText");
+            if (moodValueText) {
+                moodValueText.textContent = T.journal.moodValue;
+            }
+            document.getElementById('labelHowAreYou').textContent = T.journal.howAreYou;
+            document.getElementById('journalText').placeholder = T.journal.placeholder;
+            document.getElementById('saveJournalButton').innerHTML = T.buttons.saveEntry;
+
+            // Journalvärden
+            document.getElementById('h2TrackHealthMetrics').textContent = T.journal.trackMetrics;
+            document.getElementById('labelDateOfTest').textContent = T.journal.dateOfTest;
+            document.getElementById('labelMetricValue').textContent = T.journal.metricValue;
+            document.getElementById('labelMetricResult').textContent = T.journal.metricResult;
+            document.getElementById('labelMetricUnit').textContent = T.journal.metricUnit;
+            document.getElementById('metricName').placeholder = T.journal.placeholderMetricName;
+            document.getElementById('metricValue').placeholder = T.journal.placeholderMetricValue;
+            document.getElementById('metricUnit').placeholder = T.journal.placeholderMetricUnit;
+            document.getElementById('saveMetricButton').innerHTML = T.buttons.saveMetric;
+
+            // Journalvärde Trend
+            document.getElementById('h2MetricTrend').textContent = T.journal.trend;
+            document.getElementById('pMetricTrendDesc').textContent = T.journal.trendDesc;
+
+            // Journal & Metrics Tabell
+            document.getElementById('h2MyNotesAndMetrics').textContent = T.journal.myNotesAndMetrics;
+            document.getElementById('h3LoggedMetrics').textContent = T.journal.loggedMetrics;
+            // NY FIX: Använda lokaliserad sträng för journal log rubrik
+            document.getElementById('h3JournalEntriesLog').textContent = T.journal.journalEntriesLog;
+            document.getElementById('labelFilterMood').textContent = T.journal.filterMood;
+            document.getElementById('labelSearchText').textContent = T.journal.searchText;
+            document.getElementById('filterText').placeholder = T.journal.searchPlaceholder;
+
+            // Dataverktyg
+            document.getElementById("h2DataTools").textContent = T.journal.dataTools;
+            document.getElementById('exportDataButton').innerHTML = T.buttons.export;
+            document.getElementById('importDataButton').innerHTML = T.buttons.import;
+            document.getElementById('resetDataButton').innerHTML = T.buttons.reset;
+            document.getElementById("pUtilityDesc").textContent = T.journal.utilityDesc;
+
+            // Övrigt
+            updateLockUI();
+
+            // Sätt vald språk i rullistan
+            const langSelect = document.getElementById('languageSelect');
+            if (langSelect) {
+                langSelect.value = currentLang;
+            }
+        }
+
+
+        // --- DATABAS & GLOBALA VARIABLER ---
+        // Startdatabas med fasta livsmedel (ALLA NYCKLAR MÅSTE VARA SVENSKA OCH MATCHAS I foodNames!)
+        const baseFoodDatabase = {
+            // ** LEVERVÄNLIGA LIVSMEDEL (Lämpliga för leverhälsa) **
+            "Avokado": { protein: 2, fat: 15, carbs: 9, calories: 160, liverFriendly: true },
+            "Blåbär": { protein: 0.7, fat: 0.3, carbs: 14.5, calories: 57, liverFriendly: true },
+            "Broccoli": { protein: 3, fat: 0.3, carbs: 7, calories: 34, liverFriendly: true },
+            "Brunt ris": { protein: 2.6, fat: 1.0, carbs: 23.0, calories: 111, liverFriendly: true },
+            "Fullkornsbröd": { protein: 13.0, fat: 3.5, carbs: 45.0, calories: 250, liverFriendly: true },
+            "Kycklingbröst (grillad)": { protein: 31, fat: 3.6, carbs: 0, calories: 165, liverFriendly: true },
+            "Lax (ugnsbakad)": { protein: 22, fat: 13, carbs: 0, calories: 206, liverFriendly: true },
+            "Spenat": { protein: 2.9, fat: 0.4, carbs: 3.6, calories: 23, liverFriendly: true },
+            "Morötter": { protein: 0.9, fat: 0.2, carbs: 9.6, calories: 41, liverFriendly: true },
+            "Havregryn": { protein: 17, fat: 7, carbs: 66, calories: 389, liverFriendly: true },
+            "Quinoa": { protein: 14, fat: 6, carbs: 64, calories: 368, liverFriendly: true },
+            "Valnötter": { protein: 15, fat: 65, carbs: 14, calories: 654, liverFriendly: true },
+            "Mandlar": { protein: 21, fat: 49, carbs: 22, calories: 579, liverFriendly: true },
+            "Torsk (filé)": { protein: 18, fat: 0.9, carbs: 0, calories: 82, liverFriendly: true },
+            "Ägg (kokt)": { protein: 13, fat: 11, carbs: 1.1, calories: 155, liverFriendly: true },
+            "Olivolja (extra virgin)": { protein: 0, fat: 100, carbs: 0, calories: 884, liverFriendly: true },
+            "Kaffe (svart)": { protein: 0.1, fat: 0, carbs: 0, calories: 1, liverFriendly: true },
+            "Grapefrukt": { protein: 0.7, fat: 0.1, carbs: 8.4, calories: 33, liverFriendly: true },
+            "Linser (kokta)": { protein: 9, fat: 0.4, carbs: 20, calories: 116, liverFriendly: true },
+            "Kikärtor (kokta)": { protein: 8.8, fat: 2.6, carbs: 27, calories: 164, liverFriendly: true },
+            "Kalkonkött (magert)": { protein: 29, fat: 1.5, carbs: 0, calories: 135, liverFriendly: true },
+            "Fet yoghurt (osötad)": { protein: 5, fat: 3.3, carbs: 4.7, calories: 61, liverFriendly: true },
+            // NYTT: Extra frukter och grönsaker
+            "Äpple": { protein: 0.3, fat: 0.2, carbs: 13.8, calories: 52, liverFriendly: true },
+            "Apelsin": { protein: 0.9, fat: 0.1, carbs: 11.8, calories: 47, liverFriendly: true },
+            "Jordgubbar": { protein: 0.7, fat: 0.3, carbs: 7.7, calories: 32, liverFriendly: true },
+            "Sötpotatis (bakad)": { protein: 1.6, fat: 0.1, carbs: 20.1, calories: 86, liverFriendly: true },
+            "Grönkål": { protein: 4.3, fat: 0.9, carbs: 8.8, calories: 49, liverFriendly: true },
+            "Lök": { protein: 1.1, fat: 0.1, carbs: 9.3, calories: 40, liverFriendly: true },
+
+
+            // ** ICKE-LEVERVÄNLIGA LIVSMEDEL (Bör intas med måtta) **
+            "Nötkött (fettrik)": { protein: 26, fat: 15, carbs: 0, calories: 250, liverFriendly: false },
+            "Läsk (sötad)": { protein: 0, fat: 0, carbs: 11, calories: 45, liverFriendly: false },
+            "Vitt bröd": { protein: 9, fat: 3.2, carbs: 49, calories: 265, liverFriendly: false },
+            "Pommes frites": { protein: 3.4, fat: 15, carbs: 41, calories: 312, liverFriendly: false },
+            "Godis (gelé)": { protein: 2, fat: 0.1, carbs: 75, calories: 320, liverFriendly: false },
+            "Bacon": { protein: 37, fat: 42, carbs: 0, calories: 538, liverFriendly: false },
+            "Korv (med hög fetthalt)": { protein: 12, fat: 28, carbs: 2.5, calories: 315, liverFriendly: false },
+            "Raffinerat socker": { protein: 0, fat: 0, carbs: 100, calories: 400, liverFriendly: false },
+            "Energidryck (sötad)": { protein: 0, fat: 0, carbs: 11, calories: 44, liverFriendly: false },
+            "Kex (söta)": { protein: 8, fat: 20, carbs: 68, calories: 480, liverFriendly: false }
+        };
+
+        let foodDatabase = {};
+        let customFoodDatabase = {};
+
+        let allMeals = [];
+        let journalEntries = [];
+        let healthMetrics = []; // NYTT: För journalvärden
+        let dietGoals = {};
+        let waterGoal = 2500;
+        let waterIntake = {};
+        let activityGoal = 30;
+        let activityMinutes = {};
+
+        let nutritionChart;
+        let liverFriendlyChart;
+        let trendChart;
+        let activityTrendChart;
+        let goalStatusChart;
+        let metricTrendChart; // NYTT: Journalvärdesdiagram
+
+        // Globalt variabel för det valda datumet (YYYY-MM-DD)
+        let currentDate = new Date().toISOString().split('T')[0];
+        let currentCalendarDate = new Date(); // För kalendernavigering
+
+        // --- INITIALISERING ---
+        document.addEventListener("DOMContentLoaded", () => {
+            // Försök att ladda sparat språk från localStorage först
+            const savedLang = localStorage.getItem('appLanguage');
+            if (savedLang && Translations.hasOwnProperty(savedLang)) {
+                currentLang = savedLang;
+                T = Translations[currentLang];
+            }
+
+            loadData();
+            updateStaticUI(); // Uppdatera alla statiska texter först
+            initializeMealInputs(); // NYTT: Fyller i måltids- och enhetsrullistor
+            populateFoodSelect();
+            initializeChart();
+            initializeLiverFriendlyChart();
+            initializeTrendChart();
+            initializeActivityTrendChart();
+            initializeGoalStatusChart();
+            initializeMetricTrendChart(); // NYTT: Initiera journaldiagram
+
+            // Initialisera Kalender och Lyssna på ändringar
+            renderCalendar(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth());
+            document.getElementById("mealDate").value = currentDate; // Sätt dolda datumfältet
+
+            // Initialisera datumväljaren för Journalvärden
+            document.getElementById("metricDate").value = currentDate;
+
+            // Lyssna på humörväljaren i journalen
+            const moodInput = document.getElementById("journalMood");
+            const currentMoodValue = document.getElementById("currentMoodValue");
+            if (moodInput) {
+                moodInput.addEventListener('input', (e) => {
+                    currentMoodValue.textContent = e.target.value;
+                });
+            }
+
+            // Initialisera mål inputs vid laddning
+            document.getElementById('goalCalories').value = dietGoals.calories || '';
+            document.getElementById('goalProtein').value = dietGoals.protein || '';
+            document.getElementById('goalFat').value = dietGoals.fat || '';
+            document.getElementById('goalCarbs').value = dietGoals.carbs || '';
+
+            // Initialisera nya inline mål-inputs
+            document.getElementById('waterGoalInput').value = waterGoal || 2500;
+            document.getElementById('activityGoalInput').value = activityGoal || 30;
+
+            // Uppdatera lås UI baserat på isLocked initialt till true
+            updateLockUI();
+
+            // Initialisera förhandsgranskning och uppdatera UI
+            updateUI();
+            calculateMealPreview();
+            renderMetricChart(); // Rita initialt journaldiagram
+        });
+
+        // NY FUNKTION: Fyller i måltidstyper och enheter dynamiskt
+        function initializeMealInputs() {
+            const mealTypeSelect = document.getElementById("mealType");
+            const amountUnitSelect = document.getElementById("amountUnit");
+
+            // 1. Fyll i Måltidstyp-rullistan
+            mealTypeSelect.innerHTML = '';
+            Object.keys(T.mealTypes).forEach(key => {
+                let opt = document.createElement("option");
+                // Använd den översatta strängen för visning, men spara den svenska nyckeln som värde
+                opt.textContent = T.mealTypes[key];
+                opt.value = key;
+                mealTypeSelect.appendChild(opt);
+            });
+
+            // 2. Fyll i Enhet-rullistan
+            amountUnitSelect.innerHTML = '';
+            T.units.forEach(unit => {
+                let opt = document.createElement("option");
+                opt.value = unit.value;
+                opt.textContent = unit.text;
+                amountUnitSelect.appendChild(opt);
+            });
+        }
+
+        // Funktion för att formatera datum till Svenskt format
+        function formatDate(dateStr) {
+            if (dateStr === new Date().toISOString().split('T')[0]) return T.today;
+
+            // Anpassa datumformatering baserat på valt språk (använder ISO-formatet i koden)
+            let locale = 'sv-SE';
+            switch (currentLang) {
+                case 'en': locale = 'en-US'; break;
+                case 'es': locale = 'es-ES'; break;
+                case 'it': locale = 'it-IT'; break;
+            }
+
+            const [year, month, day] = dateStr.split('-').map(Number);
+            const actualDate = new Date(year, month - 1, day);
+            return actualDate.toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric' });
+        }
+
+        // NY FIX: Uppdaterad för att visa översatta livsmedelsnamn
+        function populateFoodSelect() {
+            // Kombinera basdatabasen med användarens custom-data
+            foodDatabase = { ...baseFoodDatabase, ...customFoodDatabase };
+            const foodSelect = document.getElementById("foodSelect");
+            foodSelect.innerHTML = ''; // Rensa gamla alternativ
+            const currentFoodNames = T.foodNames;
+
+            // Sortera efter det översatta namnet
+            const sortedFoodKeys = Object.keys(foodDatabase).sort((a, b) => {
+                const nameA = (currentFoodNames[a] || a).toLowerCase();
+                const nameB = (currentFoodNames[b] || b).toLowerCase();
+                return nameA.localeCompare(nameB);
+            });
+
+            sortedFoodKeys.forEach(foodKey => {
+                let opt = document.createElement("option");
+                // Värdet är ALLTID den svenska nyckeln (för att matcha foodDatabase)
+                opt.value = foodKey;
+
+                const isCustom = customFoodDatabase.hasOwnProperty(foodKey);
+                const displayName = currentFoodNames[foodKey] || foodKey;
+
+                // Textinnehållet är det översatta namnet, markerat med * om det är custom
+                opt.textContent = isCustom ? `* ${displayName}` : displayName;
+
+                foodSelect.appendChild(opt);
+            });
+        }
+
+        // --- DIAGRAM INITIALISERING ---
+        function initializeChart() {
+            const ctx = document.getElementById("nutritionChart").getContext("2d");
+            nutritionChart = new Chart(ctx, {
+                type: "doughnut",
+                data: {
+                    labels: [T.tableHeaders.Protein + " (kcal)", T.tableHeaders.Fat + " (kcal)", T.tableHeaders.Carbs + " (kcal)"],
+                    datasets: [{
+                        data: [0, 0, 0],
+                        backgroundColor: ["rgba(59, 130, 246, 0.8)", "rgba(245, 158, 11, 0.8)", "rgba(16, 185, 129, 0.8)"],
+                        borderColor: ["#ffffff", "#ffffff", "#ffffff"],
+                        borderWidth: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (c) => `${c.label}: ${c.parsed.toFixed(0)} kcal` } } }
+                }
+            });
+        }
+
+        function initializeLiverFriendlyChart() {
+            const ctx = document.getElementById("liverFriendlyChart").getContext("2d");
+            liverFriendlyChart = new Chart(ctx, {
+                type: "bar",
+                data: {
+                    labels: [T.tableHeaders.LiverFriendly + " (Ja)", T.tableHeaders.LiverFriendly + " (Nej)"],
+                    datasets: [{
+                        label: T.tableHeaders.Calories + " (kcal)",
+                        data: [0, 0],
+                        backgroundColor: ["rgba(16, 185, 129, 0.7)", "rgba(239, 68, 68, 0.7)"],
+                        borderColor: ["rgba(16, 185, 129, 1)", "rgba(239, 68, 68, 1)"],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: T.tableHeaders.Calories + " (kcal)" }
+                        }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function initializeTrendChart() {
+            const ctx = document.getElementById("trendChart").getContext("2d");
+            trendChart = new Chart(ctx, {
+                type: "line",
+                data: {
+                    labels: [], // Dagar
+                    datasets: [{
+                        label: 'Totala Kalorier',
+                        data: [],
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                        fill: true,
+                        tension: 0.3,
+                        borderWidth: 2
+                    },
+                    {
+                        label: 'Kalorimål',
+                        data: [],
+                        borderColor: 'rgba(239, 68, 68, 0.8)',
+                        backgroundColor: 'transparent',
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        fill: false,
+                        tension: 0
+                    }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Kalorier (kcal)' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    },
+                    plugins: { legend: { display: true } }
+                }
+            });
+        }
+
+        function initializeActivityTrendChart() {
+            const ctx = document.getElementById("activityTrendChart").getContext("2d");
+            activityTrendChart = new Chart(ctx, {
+                type: "line",
+                data: {
+                    labels: [], // Dagar
+                    datasets: [{
+                        label: 'Träningsminuter',
+                        data: [],
+                        borderColor: 'rgba(245, 158, 11, 1)', // Activity Color
+                        backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                        fill: true,
+                        tension: 0.3,
+                        borderWidth: 2
+                    },
+                    {
+                        label: 'Mål (min)',
+                        data: [],
+                        borderColor: 'rgba(59, 130, 246, 0.8)',
+                        backgroundColor: 'transparent',
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        fill: false,
+                        tension: 0
+                    }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Minuter' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    },
+                    plugins: { legend: { display: true } }
+                }
+            });
+        }
+
+        function initializeGoalStatusChart() {
+            const ctx = document.getElementById("goalStatusChart").getContext("2d");
+            goalStatusChart = new Chart(ctx, {
+                type: "bar",
+                data: {
+                    labels: ["Hydrering (ml)", "Aktivitet (min)", "Kalorier (kcal)"],
+                    datasets: [
+                        {
+                            label: 'Uppnått',
+                            data: [0, 0, 0],
+                            backgroundColor: ["rgba(59, 130, 246, 0.8)", "rgba(245, 158, 11, 0.8)", "rgba(16, 185, 129, 0.8)"],
+                        },
+                        {
+                            label: 'Mål',
+                            data: [0, 0, 0],
+                            backgroundColor: ["#e2e8f0", "#e2e8f0", "#e2e8f0"],
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y', // Gör det till ett horisontellt stapeldiagram
+                    scales: {
+                        x: {
+                            stacked: true,
+                            beginAtZero: true,
+                            title: { display: true, text: 'Värde' }
+                        },
+                        y: {
+                            stacked: true
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                // Visar faktiskt värde istället för stapelns total
+                                label: (context) => {
+                                    const label = context.dataset.label || '';
+                                    if (label === 'Uppnått') {
+                                        return `Uppnått: ${context.parsed.x}`;
+                                    } else if (label === 'Mål') {
+                                        const achieved = context.chart.data.datasets[0].data[context.dataIndex];
+                                        const goal = achieved + context.parsed.x;
+                                        return `Återstående: ${context.parsed.x} (Mål: ${goal})`;
+                                    }
+                                    return null;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function initializeMetricTrendChart() {
+            const ctx = document.getElementById("metricTrendChart").getContext("2d");
+            metricTrendChart = new Chart(ctx, {
+                type: "line",
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Värde',
+                        data: [],
+                        borderColor: 'rgba(16, 185, 129, 1)',
+                        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                        fill: true,
+                        tension: 0.3,
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: { display: true, text: 'Mätvärde' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+        // --- SLUT DIAGRAM INITIALISERING ---
+
+
+        // --- DATOHANTERING (LADDA & SPARA med localStorage) ---
+        function loadData() {
+            allMeals = JSON.parse(localStorage.getItem("liverDietMeals") || "[]");
+            journalEntries = JSON.parse(localStorage.getItem("liverDietJournal") || "[]");
+            healthMetrics = JSON.parse(localStorage.getItem("healthMetrics") || "[]"); // NYTT: Ladda Mätvärden
+            dietGoals = JSON.parse(localStorage.getItem("dietGoals") || "{}");
+            waterGoal = parseInt(localStorage.getItem("waterGoal")) || 2500;
+            waterIntake = JSON.parse(localStorage.getItem("waterIntake") || "{}");
+            activityGoal = parseInt(localStorage.getItem("activityGoal")) || 30;
+            activityMinutes = JSON.parse(localStorage.getItem("activityMinutes") || "{}");
+            // Ladda in Custom Foods
+            customFoodDatabase = JSON.parse(localStorage.getItem("customFoodDatabase") || "{}");
+        }
+
+        function saveData() {
+            localStorage.setItem("liverDietMeals", JSON.stringify(allMeals));
+            localStorage.setItem("liverDietJournal", JSON.stringify(journalEntries));
+            localStorage.setItem("healthMetrics", JSON.stringify(healthMetrics)); // NYTT: Spara Mätvärden
+            localStorage.setItem("dietGoals", JSON.stringify(dietGoals));
+            localStorage.setItem("waterGoal", waterGoal.toString());
+            localStorage.setItem("waterIntake", JSON.stringify(waterIntake));
+            localStorage.setItem("activityGoal", activityGoal.toString());
+            localStorage.setItem("activityMinutes", JSON.stringify(activityMinutes));
+            // Spara Custom Foods
+            localStorage.setItem("customFoodDatabase", JSON.stringify(customFoodDatabase));
+        }
+
+        // Funktion för att spara mål
+        function saveGoals() {
+            dietGoals.calories = parseInt(document.getElementById('goalCalories').value) || 0;
+            dietGoals.protein = parseInt(document.getElementById('goalProtein').value) || 0;
+            dietGoals.fat = parseInt(document.getElementById('goalFat').value) || 0;
+            dietGoals.carbs = parseInt(document.getElementById('goalCarbs').value) || 0;
+            saveData();
+            updateUI();
+
+            // Visuell feedback
+            const saveButton = document.querySelector('#overview .card:nth-child(1) button');
+            const originalText = saveButton.innerHTML;
+            saveButton.innerHTML = 'Mål Sparade! ✅';
+            setTimeout(() => { saveButton.innerHTML = originalText; }, 1500);
+        }
+
+        // --- CUSTOM FOOD HANTERING ---
+        function addCustomFood() {
+            const T = Translations[currentLang];
+            // Kontrollera lås
+            if (isLocked) { alert(T.alerts.locked); return; }
+
+            const name = document.getElementById('customFoodName').value.trim();
+            const protein = parseFloat(document.getElementById('customFoodProtein').value) || 0;
+            const fat = parseFloat(document.getElementById('customFoodFat').value) || 0;
+            const carbs = parseFloat(document.getElementById('customFoodCarbs').value) || 0;
+            const calories = parseInt(document.getElementById('customFoodCalories').value) || 0;
+            const liverFriendly = document.getElementById('customFoodFriendly').checked;
+
+            if (name === "" || foodDatabase.hasOwnProperty(name)) {
+                alert(T.prompts.invalidName);
+                return;
+            }
+
+            customFoodDatabase[name] = { protein, fat, carbs, calories, liverFriendly };
+            saveData();
+            populateFoodSelect(); // Uppdatera rullistan
+
+            // Återställ formuläret
+            document.getElementById('customFoodName').value = '';
+            document.getElementById('customFoodProtein').value = '0';
+            document.getElementById('customFoodFat').value = '0';
+            document.getElementById('customFoodCarbs').value = '0';
+            document.getElementById('customFoodCalories').value = '0';
+            document.getElementById('customFoodFriendly').checked = true;
+
+            alert(T.alerts.customFoodSuccess(name));
+        }
+
+        // --- MÅLTIDSHANTERING ---
+        function addMeal() {
+            const mealType = document.getElementById("mealType").value; // Detta är den svenska nyckeln
+            const food = document.getElementById("foodSelect").value;
+
+            const finalGramsInput = document.getElementById("finalGrams");
+            const amount = parseInt(finalGramsInput.value);
+
+            if (!amount || amount <= 0 || !document.getElementById("mealDate").value) {
+                console.error("Valideringsfel: Vänligen välj ett livsmedel, ange en mängd och ett datum.");
+                return;
+            }
+
+            allMeals.push({ id: Date.now(), date: currentDate, mealType, food, amount });
+            saveData();
+            updateUI();
+            renderCalendar(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth()); // Uppdatera kalenderprickar
+            document.getElementById("amountValue").value = 1;
+            // Väljer standardenheten "gram (g)" igen
+            document.getElementById("amountUnit").value = Translations['sv'].units[0].value; // Använd svensk standardvikt
+            calculateMealPreview();
+
+            // NYTT: Scrolla till den nya raden
+            setTimeout(() => {
+                const table = document.getElementById('mealTableBody');
+                if (table.lastChild) {
+                    table.lastChild.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                }
+            }, 100);
+        }
+
+        function deleteMeal(id) {
+            const T = Translations[currentLang];
+            // Kontrollera lås
+            if (isLocked) { alert(T.alerts.locked); return; }
+
+            allMeals = allMeals.filter(meal => meal.id !== id);
+            saveData();
+            updateUI();
+            updateLiverHealthFeedback();
+            renderCalendar(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth()); // Uppdatera kalenderprickar
+        }
+
+        // Funktion för att beräkna måltidsförhandsgranskning (Uppdaterad för portionshantering)
+        function calculateMealPreview() {
+            const T = Translations[currentLang];
+            const food = document.getElementById("foodSelect").value;
+            const amountValue = parseFloat(document.getElementById("amountValue").value) || 0;
+            const amountUnitGram = parseFloat(document.getElementById("amountUnit").value) || 100;
+
+            // Beräkna slutgiltig vikt i gram
+            const finalGrams = amountValue * amountUnitGram;
+            document.getElementById("finalGrams").value = finalGrams.toFixed(0);
+
+            const previewDiv = document.getElementById("mealPreview");
+            const previewContent = document.getElementById("mealPreviewContent");
+
+            if (!food || amountValue <= 0 || !foodDatabase[food]) {
+                previewDiv.style.display = 'none';
+                return;
+            }
+
+            const data = foodDatabase[food];
+            const factor = finalGrams / 100;
+
+            const protein = (data.protein * factor).toFixed(1);
+            const fat = (data.fat * factor).toFixed(1);
+            const carbs = (data.carbs * factor).toFixed(1);
+            const calories = (data.calories * factor).toFixed(0);
+
+            const friendlyText = data.liverFriendly
+                ? `<span style="color: var(--green); font-weight: 600;">✅ ${T.tableHeaders.LiverFriendly}</span>`
+                : `<span style="color: var(--red); font-weight: 600;">❌ ${T.tableHeaders.LiverFriendly} (${T.tableHeaders.DeleteMeal})</span>`;
+
+            previewContent.innerHTML = `
+            ${friendlyText} | 
+            ${T.tableHeaders.Protein}: <b>${protein}g</b> | 
+            ${T.tableHeaders.Fat}: <b>${fat}g</b> | 
+            ${T.tableHeaders.Carbs}: <b>${carbs}g</b> | 
+            ${T.tableHeaders.Calories}: <b>${calories} ${T.tableHeaders.Calories.toLowerCase()}</b>
+            <br><i>${T.h3CalculatedIntake} (${finalGrams.toFixed(0)} g).</i>
+        `;
+            previewDiv.style.display = 'block';
+        }
+
+        // NYTT: Lokal Leverhälsorapport (Ersätter AI-förslag)
+        function updateLiverHealthFeedback() {
+            const T = Translations[currentLang];
+            const mealsForToday = allMeals.filter(meal => meal.date === currentDate);
+            const feedbackElement = document.getElementById('liverHealthFeedback');
+
+            const formattedDate = formatDate(currentDate).toLowerCase();
+
+            if (mealsForToday.length === 0) {
+                feedbackElement.innerHTML = `<h3>${T.feedback.welcome}</h3><p>${T.feedback.logFirstMeal(formattedDate)}</p>`;
+                feedbackElement.style.background = '#e0f2fe';
+                feedbackElement.style.border = '1px solid var(--primary-blue-dark)';
+                feedbackElement.style.color = 'var(--text-dark)';
+                return;
+            }
+
+            let totalCalories = 0;
+            let nonFriendlyCalories = 0;
+            let nonFriendlyItems = {};
+
+            mealsForToday.forEach(meal => {
+                const data = foodDatabase[meal.food];
+                const factor = meal.amount / 100;
+                const mealCalories = data.calories * factor;
+                totalCalories += mealCalories;
+
+                if (!data.liverFriendly) {
+                    nonFriendlyCalories += mealCalories;
+                    if (!nonFriendlyItems[meal.food]) nonFriendlyItems[meal.food] = 0;
+                    nonFriendlyItems[meal.food] += mealCalories;
+                }
+            });
+
+            const nonFriendlyPercentage = totalCalories > 0 ? (nonFriendlyCalories / totalCalories) * 100 : 0;
+            const nonFriendlyList = Object.keys(nonFriendlyItems).map(foodKey =>
+                // Använd översatt namn här
+                `- ${T.foodNames[foodKey] || foodKey} (${nonFriendlyItems[foodKey].toFixed(0)} kcal)`
+            ).join('<br>');
+
+            let h3, message, bgColor, borderColor, textColor;
+
+            if (nonFriendlyPercentage === 0) {
+                h3 = T.feedback.excellent;
+                message = T.feedback.excellentMessage;
+                bgColor = '#f0fff4';
+                borderColor = 'var(--green)';
+                textColor = '#065f46';
+            } else if (nonFriendlyPercentage < 10) {
+                h3 = T.feedback.good;
+                message = T.feedback.goodMessage(nonFriendlyPercentage.toFixed(1), nonFriendlyCalories.toFixed(0), nonFriendlyList);
+                bgColor = '#fffdfa';
+                borderColor = 'var(--yellow)';
+                textColor = '#b45309';
+            } else {
+                h3 = T.feedback.warning;
+                message = T.feedback.warningMessage(nonFriendlyPercentage.toFixed(1), nonFriendlyCalories.toFixed(0), nonFriendlyList);
+                bgColor = '#fef2f2';
+                borderColor = 'var(--deep-red)';
+                textColor = 'var(--deep-red)';
+            }
+
+            feedbackElement.innerHTML = `<h3>${h3}</h3><p>${message}</p>`;
+            feedbackElement.style.background = bgColor;
+            feedbackElement.style.border = `1px solid ${borderColor}`;
+            feedbackElement.style.color = textColor;
+        }
+
+
+        // --- HYDRERINGSHANTERING ---
+
+        function setWaterGoal() {
+            const newGoal = parseInt(document.getElementById('waterGoalInput').value);
+            if (!isNaN(newGoal) && newGoal > 0) {
+                waterGoal = newGoal;
+                saveData();
+                updateUI();
+            } else {
+                console.error("Ogiltigt vattenmål angivet.");
+            }
+        }
+
+        function addWater(amount) {
+            if (!waterIntake[currentDate]) {
+                waterIntake[currentDate] = 0;
+            }
+            waterIntake[currentDate] = Math.max(0, waterIntake[currentDate] + amount); // Se till att det inte går under noll
+            saveData();
+            updateUI();
+        }
+
+        function updateWaterDisplay() {
+            const T = Translations[currentLang];
+            const intakeToday = waterIntake[currentDate] || 0;
+
+            const intakeDisplay = document.getElementById('waterIntakeDisplay');
+            const goalDisplay = document.getElementById('waterGoalDisplay');
+            const intakeText = document.getElementById('intakeTodayText');
+            const goalText = document.getElementById('waterGoalText');
+            const card = document.querySelector('#overview .card:nth-child(2)');
+
+            if (intakeDisplay) intakeDisplay.textContent = `${intakeToday} ml`;
+            if (goalDisplay) goalDisplay.textContent = `${waterGoal} ml`;
+
+            // Uppdatera h3-texterna
+            if (intakeText) intakeText.textContent = T.overview.intakeToday;
+            if (goalText) goalText.textContent = T.overview.goal;
+
+            if (card) {
+                if (intakeToday >= waterGoal) {
+                    card.style.border = `2px solid var(--green)`;
+                } else {
+                    card.style.border = `none`;
+                }
+            }
+        }
+
+        // --- AKTIVITETSHANTERING ---
+        function setActivityGoal() {
+            const newGoal = parseInt(document.getElementById('activityGoalInput').value);
+            if (!isNaN(newGoal) && newGoal > 0) {
+                activityGoal = newGoal;
+                saveData();
+                updateUI();
+            } else {
+                console.error("Ogiltigt aktivitetsmål angivet.");
+            }
+        }
+
+        function addActivity(amount) {
+            if (!activityMinutes[currentDate]) {
+                activityMinutes[currentDate] = 0;
+            }
+            activityMinutes[currentDate] = Math.max(0, activityMinutes[currentDate] + amount); // Se till att det inte går under noll
+            saveData();
+            updateUI();
+        }
+
+        function updateActivityDisplay() {
+            const T = Translations[currentLang];
+            const minutesToday = activityMinutes[currentDate] || 0;
+
+            const minutesDisplay = document.getElementById('activityMinutesDisplay');
+            const goalDisplay = document.getElementById('activityGoalDisplay');
+            const trainingText = document.getElementById('trainingTodayText');
+            const activityGoalText = document.getElementById('activityGoalText');
+            const card = document.querySelector('#overview .card:nth-child(3)');
+
+            if (minutesDisplay) minutesDisplay.textContent = `${minutesToday} min`;
+            if (goalDisplay) goalDisplay.textContent = `${activityGoal} min`;
+
+            // Uppdatera h3-texterna
+            if (trainingText) trainingText.textContent = T.overview.trainingToday;
+            if (activityGoalText) activityGoalText.textContent = T.overview.goal;
+
+            if (card) {
+                if (minutesToday >= activityGoal) {
+                    card.style.border = `2px solid var(--green)`;
+                } else {
+                    card.style.border = `none`;
+                }
+            }
+        }
+
+
+        // --- JOURNALHANTERING ---
+        function saveJournalEntry() {
+            const journalTextarea = document.getElementById("journalText");
+            const saveButton = document.getElementById("saveJournalButton");
+            const moodInput = document.getElementById("journalMood");
+
+            const originalText = saveButton.innerHTML;
+
+            const text = journalTextarea.value;
+            const mood = parseInt(moodInput.value);
+
+            if (text.trim() === "") return;
+
+            const timestampISO = new Date().toISOString();
+            const timestampDisplay = new Date().toLocaleString(currentLang === 'sv' ? 'sv-SE' : 'en-US'); // Använd engelsk formatering för icke-svenska språk tills vidare
+
+            journalEntries.unshift({ id: Date.now(), timestamp: timestampISO, displayTime: timestampDisplay, text, mood });
+            saveData();
+            updateUI();
+            journalTextarea.value = "";
+            moodInput.value = "3"; // Återställ
+            document.getElementById("currentMoodValue").textContent = "3"; // Återställ
+
+            // Visuell feedback
+            saveButton.innerHTML = 'Sparat! ✅';
+            saveButton.disabled = true;
+            setTimeout(() => {
+                saveButton.innerHTML = originalText;
+                saveButton.disabled = false;
+            }, 1500);
+        }
+
+        function renderJournalEntries() {
+            const T = Translations[currentLang];
+            const container = document.getElementById("journal-entries");
+            const filterMood = parseInt(document.getElementById("filterMood")?.value || 0);
+            const filterText = document.getElementById("filterText")?.value.toLowerCase() || '';
+
+            // Filtrera journalanteckningar
+            let filteredEntries = journalEntries.filter(entry => {
+                const moodMatch = (filterMood === 0) || (entry.mood === filterMood);
+                const textMatch = (filterText.length === 0) || (entry.text.toLowerCase().includes(filterText));
+                return moodMatch && textMatch;
+            });
+
+            container.innerHTML = "";
+
+            if (filteredEntries.length === 0) {
+                container.innerHTML = `<p>${filterText.length > 0 || filterMood !== 0 ? T.journal.noFilterMatch : T.journal.noEntriesYet}</p>`;
+                return;
+            }
+
+            const moodEmojis = { 1: '😞', 2: '😐', 3: '🙂', 4: '😄', 5: '🤩' };
+
+            filteredEntries.forEach(entry => {
+                const entryDiv = document.createElement('div');
+                entryDiv.className = 'journal-entry';
+                entryDiv.id = `journal-entry-${entry.id}`; // Lägg till ID för scroll
+                const displayTime = entry.displayTime || new Date(entry.timestamp).toLocaleString(currentLang === 'sv' ? 'sv-SE' : 'en-US'); // Använd korrekt lokalisering
+                const moodDisplay = entry.mood ? ` <span style="font-size: 1.2rem; margin-left: 10px;">${moodEmojis[entry.mood] || ''}</span> (${T.journal.moodValue}: ${entry.mood}/5)` : '';
+
+                // Lade till ID för analyssvar
+                entryDiv.innerHTML = `<small>${displayTime}${moodDisplay}</small><p>${entry.text.replace(/\n/g, '<br>')}</p>`;
+                container.appendChild(entryDiv);
+            });
+        }
+
+        // --- NY FUNKTION: JOURNALVÄRDEN ---
+
+        function saveHealthMetric() {
+            const T = Translations[currentLang];
+            const date = document.getElementById('metricDate').value;
+            const name = document.getElementById('metricName').value.trim();
+            const value = parseFloat(document.getElementById('metricValue').value);
+            const unit = document.getElementById('metricUnit').value.trim();
+
+            if (!date || name === "" || isNaN(value) || unit === "") {
+                alert(T.prompts.metricValidation);
+                return;
+            }
+
+            const newMetric = {
+                id: Date.now(),
+                date: date,
+                name: name,
+                value: value,
+                unit: unit
+            };
+
+            healthMetrics.unshift(newMetric); // Lägg till överst
+            saveData();
+            renderMetrics();
+            renderMetricChart(); // Uppdatera diagrammet
+
+            // Återställ formulär
+            document.getElementById('metricName').value = '';
+            document.getElementById('metricValue').value = '';
+            // Låt enheten vara kvar för snabb inmatning av samma typ
+        }
+
+        function deleteMetric(id) {
+            const T = Translations[currentLang];
+            // Kontrollera lås
+            if (isLocked) { alert(T.alerts.locked); return; }
+
+            healthMetrics = healthMetrics.filter(metric => metric.id !== id);
+            saveData();
+            renderMetrics();
+            renderMetricChart(); // Uppdatera diagrammet
+        }
+
+        function renderMetrics() {
+            const T = Translations[currentLang];
+            const tableBody = document.getElementById('metricTableBody');
+            tableBody.innerHTML = '';
+
+            const deleteHeader = document.getElementById('metricDeleteHeader');
+            if (deleteHeader) {
+                deleteHeader.style.display = isLocked ? 'none' : 'table-cell';
+            }
+
+            if (healthMetrics.length === 0) {
+                // Skapa responsivt 'Inget loggat'-meddelande
+                const colspan = isLocked ? 4 : 5;
+                tableBody.innerHTML = `<tr><td colspan="${colspan}" style="text-align: center; color: var(--text-secondary);">${T.journal.noMetrics}</td></tr>`;
+                return;
+            }
+
+            // Sortera efter datum (nyaste först)
+            healthMetrics.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            healthMetrics.forEach(metric => {
+                const deleteCell = isLocked ? '' : `<td><button class="btn-delete" onclick="deleteMetric(${metric.id})">🗑️</button></td>`;
+
+                // NY FIX: Lägg till data-label attribut för mobilvisning
+                const row = `<tr>
+                <td data-label="Datum">${formatDate(metric.date)}</td>
+                <td data-label="Värde">${metric.name}</td>
+                <td data-label="Resultat" class="numeric-cell">${metric.value.toFixed(2)}</td>
+                <td data-label="Enhet">${metric.unit}</td>
+                ${deleteCell}
+            </tr>`;
+                tableBody.insertAdjacentHTML("beforeend", row);
+            });
+        }
+
+        function renderMetricChart() {
+            const metricNameInput = document.getElementById('metricName');
+            const selectedMetric = metricNameInput ? metricNameInput.value.trim() : '';
+
+            // Filtrera data för det valda värdet och sortera efter datum (äldst först)
+            const filteredData = healthMetrics
+                .filter(m => m.name.toLowerCase() === selectedMetric.toLowerCase())
+                .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            const labels = filteredData.map(m => formatDate(m.date));
+            const values = filteredData.map(m => m.value);
+            const unit = filteredData.length > 0 ? filteredData[0].unit : '';
+
+            metricTrendChart.data.labels = labels;
+            metricTrendChart.data.datasets[0].data = values;
+            metricTrendChart.data.datasets[0].label = selectedMetric ? `${selectedMetric} (${unit})` : 'Värde';
+            metricTrendChart.options.scales.y.title.text = `Mätvärde (${unit})`;
+
+            metricTrendChart.update();
+        }
+
+
+        // --- DATA EXPORT/IMPORT/RESET ---
+        function exportData() {
+            const T = Translations[currentLang];
+            // Kontrollera lås
+            if (isLocked) { alert(T.alerts.locked); return; }
+
+            const data = {
+                allMeals,
+                journalEntries,
+                healthMetrics, // NYTT: Inkludera i export
+                dietGoals,
+                waterGoal,
+                waterIntake,
+                activityGoal,
+                activityMinutes,
+                customFoodDatabase
+            };
+            const dataStr = JSON.stringify(data, null, 2);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `leverkost_backup_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function importData(event) {
+            const T = Translations[currentLang];
+            // Kontrollera lås
+            if (isLocked) { alert(T.alerts.locked); return; }
+
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+
+                    // Kontrollera att filen har de förväntade nycklarna
+                    if (importedData.allMeals && importedData.journalEntries) {
+                        if (confirm(T.prompts.confirmReplaceData)) {
+                            allMeals = importedData.allMeals || [];
+                            journalEntries = importedData.journalEntries || [];
+                            healthMetrics = importedData.healthMetrics || []; // NYTT: Importera Journalvärden
+                            dietGoals = importedData.dietGoals || {};
+                            waterGoal = importedData.waterGoal || 2500;
+                            waterIntake = importedData.waterIntake || {};
+                            activityGoal = importedData.activityGoal || 30;
+                            activityMinutes = importedData.activityMinutes || {};
+                            customFoodDatabase = importedData.customFoodDatabase || {};
+                            currentLang = importedData.currentLang || 'sv'; // Återställ språk om det fanns med i backup
+
+                            saveData();
+                            location.reload(); // Ladda om sidan för att uppdatera allt korrekt
+                        }
+                    } else {
+                        alert(T.alerts.importError);
+                    }
+                } catch (error) {
+                    alert(T.alerts.jsonError);
+                    console.error("Importfel:", error);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function resetData() {
+            const T = Translations[currentLang];
+            // Kontrollera lås
+            if (isLocked) { alert(T.alerts.locked); return; }
+
+            if (confirm(T.prompts.confirmResetData)) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
+
+
+        // --- KALENDERHANTERING ---
+        function renderCalendar(year, month) {
+            const monthNamesLocale = {
+                sv: ["Januari", "Februari", "Mars", "April", "Maj", "Juni", "Juli", "Augusti", "September", "Oktober", "November", "December"],
+                en: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+                es: ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"],
+                it: ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"]
+            };
+            const dayNamesLocale = {
+                sv: ["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"],
+                en: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+                es: ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"],
+                it: ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
+            };
+
+            document.getElementById('currentMonthYear').textContent = `${monthNamesLocale[currentLang][month]} ${year}`;
+
+            const calendarGrid = document.getElementById('calendarDays');
+            // Rensa gamla dagar, behåll bara veckodagsnamnen
+            calendarGrid.querySelectorAll('.calendar-day:not(.calendar-day-name)').forEach(day => day.remove());
+
+            // Uppdatera veckodagsnamnen
+            const dayNameElements = calendarGrid.querySelectorAll('.calendar-day-name');
+            dayNamesLocale[currentLang].forEach((name, index) => {
+                // Veckan startar alltid på Mån (index 0) i HTML-strukturen
+                dayNameElements[index].textContent = name;
+            });
+
+
+            const firstDayOfMonth = new Date(year, month, 1);
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            let startDay = firstDayOfMonth.getDay(); // Sön=0, Mån=1, etc.
+            if (startDay === 0) startDay = 7; // Gör Söndag till 7:e dagen (för 1-7 vecka)
+
+            // Hitta alla dagar med loggad mat i denna månad
+            const loggedDates = allMeals
+                .filter(meal => meal.date.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`))
+                .map(meal => meal.date.split('-')[2]); // Extrahera bara dagen
+
+            // Lägg till tomma rutor för att starta på rätt veckodag (Måndag = 1)
+            for (let i = 1; i < startDay; i++) {
+                const emptyDay = document.createElement('div');
+                emptyDay.className = 'calendar-day empty';
+                calendarGrid.appendChild(emptyDay);
+            }
+
+            // Lägg till dagarna i månaden
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-day';
+                dayElement.textContent = day;
+                dayElement.dataset.date = dateStr;
+
+                // Markera dagen som har loggad mat
+                if (loggedDates.includes(String(day).padStart(2, '0'))) {
+                    dayElement.classList.add('logged');
+                }
+
+                // Markera den aktuella valda dagen
+                if (dateStr === currentDate) {
+                    dayElement.classList.add('selected');
+                }
+
+                dayElement.onclick = () => selectDate(dateStr);
+                calendarGrid.appendChild(dayElement);
+            }
+        }
+
+        function changeMonth(step) {
+            currentCalendarDate.setMonth(currentCalendarDate.getMonth() + step);
+            renderCalendar(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth());
+        }
+
+        function selectDate(dateStr) {
+            currentDate = dateStr;
+            // Uppdatera det dolda input-fältet och rita om kalendern och UI
+            document.getElementById("mealDate").value = currentDate;
+            renderCalendar(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth());
+            updateUI();
+        }
+
+
+        // --- AI/GEMINI KOD BORTTAGEN FÖR STABILITET ---
+
+        // NYTT: Funktion för att byta sida och uppdatera diagram
+        function showPage(pageId) {
+            document.querySelectorAll(".page").forEach(p => p.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            document.querySelectorAll(".sidebar a").forEach(a => a.classList.remove("active"));
+            document.querySelector(`.sidebar a[onclick="showPage('${pageId}')"]`).classList.add("active");
+
+            // Tvinga diagram att ritas om när Översikt visas
+            if (pageId === 'overview') {
+                // Anropa de funktioner som uppdaterar diagrammen
+                updateTrendSummary();
+                updateGoalStatusChart();
+                updateActivityTrendSummary();
+                // Även diagram som använder T-värden måste uppdateras
+                initializeChart();
+                initializeLiverFriendlyChart();
+            }
+
+            // Tvinga mätvärden att ritas om när Journal visas
+            if (pageId === 'journal') {
+                renderMetrics();
+                renderMetricChart(); // Rita om journaldiagrammet
+            }
+
+            // Tvinga kalendern att ritas om när Måltider visas
+            if (pageId === 'meals') {
+                renderCalendar(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth());
+            }
+        }
+
+
+        // --- UI-UPPDATERINGAR ---
+        function updateUI() {
+            // FIX: Lägg till säkerhetskontroll för mealsTitleDate
+            const mealsTitleDateElement = document.getElementById("mealsTitleDate");
+            if (mealsTitleDateElement) {
+                const formattedDate = formatDate(currentDate);
+                mealsTitleDateElement.textContent = formattedDate;
+            }
+
+            renderMealTable();
+            updateNutritionSummary();
+            renderJournalEntries();
+            renderMetrics(); // Rendera mätvärden
+            updateTrendSummary();
+            updateWaterDisplay();
+            updateActivityDisplay();
+            updateGoalStatusChart();
+            updateActivityTrendSummary();
+            updateLiverHealthFeedback();
+            updateLockUI(); // Se till att låsstatus visas
+        }
+
+        function renderMealTable() {
+            const mealTableBody = document.getElementById("mealTableBody");
+            mealTableBody.innerHTML = "";
+
+            const mealsForToday = allMeals.filter(meal => meal.date === currentDate);
+
+            // Hitta rubriken för ta bort-kolumnen i måltidstabellen
+            const mealTable = document.querySelector('#meals table');
+            const deleteHeader = mealTable ? mealTable.querySelector('thead th:last-child') : null;
+            if (deleteHeader) {
+                deleteHeader.style.display = isLocked ? 'none' : 'table-cell';
+            }
+
+
+            mealsForToday.forEach(meal => {
+                const data = foodDatabase[meal.food];
+                const factor = meal.amount / 100;
+                const protein = (data.protein * factor).toFixed(1);
+                const fat = (data.fat * factor).toFixed(1);
+                const carbs = (data.carbs * factor).toFixed(1);
+                const calories = (data.calories * factor).toFixed(1);
+
+                const liverStatus = data.liverFriendly
+                    ? `<span style="color: var(--green); font-weight: 600;">✅ ${T.tableHeaders.LiverFriendly}</span>`
+                    : `<span style="color: var(--red); font-weight: 600;">❌ ${T.tableHeaders.DeleteMeal}</span>`;
+
+                const rowClass = data.liverFriendly ? '' : 'warning-row';
+
+                const deleteCell = isLocked ? '' : `<td class="locked-feature-cell"><button class="btn-delete" onclick="deleteMeal(${meal.id})">🗑️</button></td>`;
+
+                // NY FIX: Använd T.foodNames för att översätta livsmedelsnamnet i tabellen
+                const translatedFoodName = T.foodNames[meal.food] || meal.food;
+
+                // NY FIX: Lägg till data-label attribut för mobilvisning
+                const row = `<tr class="${rowClass}">
+                <td data-label="${T.tableHeaders.MealType}">${T.mealTypes[meal.mealType] || meal.mealType}</td> 
+                <td data-label="${T.tableHeaders.FoodItem}">${translatedFoodName}</td>
+                <td data-label="${T.tableHeaders.Amount}" class="numeric-cell">${meal.amount} g</td>
+                <td data-label="${T.tableHeaders.Protein}" class="numeric-cell">${protein} g</td>
+                <td data-label="${T.tableHeaders.Fat}" class="numeric-cell">${fat} g</td>
+                <td data-label="${T.tableHeaders.Carbs}" class="numeric-cell">${carbs} g</td>
+                <td data-label="${T.tableHeaders.Calories}" class="numeric-cell">${calories} kcal</td>
+                <td data-label="${T.tableHeaders.LiverFriendly}">${liverStatus}</td>
+                ${deleteCell}
+            </tr>`;
+                mealTableBody.insertAdjacentHTML("beforeend", row);
+            });
+
+            if (mealsForToday.length === 0) {
+                // Beräkna colspan: 8 fasta + 1 om olåst
+                const colspan = isLocked ? 8 : 9;
+                mealTableBody.innerHTML = `<tr><td colspan="${colspan}" style="text-align: center; color: var(--text-secondary);">Inga måltider loggade för ${formatDate(currentDate).toLowerCase()}.</td></tr>`;
+            }
+
+            // Dölj celler i tabellen om låst (efter att de renderats)
+            document.querySelectorAll('#mealTableBody tr').forEach(row => {
+                if (isLocked) {
+                    const lastCell = row.querySelector('td:last-child');
+                    if (lastCell) lastCell.style.display = 'none';
+                }
+            });
+        }
+
+        function updateNutritionSummary() {
+            let total = { protein: 0, fat: 0, carbs: 0, calories: 0 };
+            let liverFriendlyCalories = 0;
+            let nonLiverFriendlyCalories = 0;
+
+            const mealsForToday = allMeals.filter(meal => meal.date === currentDate);
+
+            mealsForToday.forEach(meal => {
+                const data = foodDatabase[meal.food];
+                const factor = meal.amount / 100;
+                const mealCalories = data.calories * factor;
+
+                total.protein += data.protein * factor;
+                total.fat += data.fat * factor;
+                total.carbs += data.carbs * factor;
+                total.calories += mealCalories;
+
+                if (data.liverFriendly) {
+                    liverFriendlyCalories += mealCalories;
+                } else {
+                    nonLiverFriendlyCalories += mealCalories;
+                }
+            });
+
+            document.getElementById("totalProtein").textContent = `${total.protein.toFixed(1)} g` + (dietGoals.protein ? ` / ${dietGoals.protein} g` : '');
+            document.getElementById("totalFat").textContent = `${total.fat.toFixed(1)} g` + (dietGoals.fat ? ` / ${dietGoals.fat} g` : '');
+            document.getElementById("totalCarbs").textContent = `${total.carbs.toFixed(1)} g` + (dietGoals.carbs ? ` / ${dietGoals.carbs} g` : '');
+            document.getElementById("totalCalories").textContent = `${total.calories.toFixed(0)} kcal` + (dietGoals.calories ? ` / ${dietGoals.calories} kcal` : '');
+
+
+            const proteinCalories = total.protein * 4;
+            const fatCalories = total.fat * 9;
+            const carbsCalories = total.carbs * 4;
+
+            // Uppdatera befintliga diagram med nya titlar/labels
+            if (nutritionChart) {
+                nutritionChart.data.labels = [T.tableHeaders.Protein + " (kcal)", T.tableHeaders.Fat + " (kcal)", T.tableHeaders.Carbs + " (kcal)"];
+                nutritionChart.data.datasets[0].data = [proteinCalories, fatCalories, carbsCalories];
+                nutritionChart.update();
+            }
+
+            if (liverFriendlyChart) {
+                liverFriendlyChart.data.labels = [T.tableHeaders.LiverFriendly + " (Ja)", T.tableHeaders.LiverFriendly + " (Nej)"];
+                liverFriendlyChart.data.datasets[0].data = [liverFriendlyCalories.toFixed(0), nonLiverFriendlyCalories.toFixed(0)];
+                liverFriendlyChart.options.scales.y.title.text = T.tableHeaders.Calories + " (kcal)";
+                liverFriendlyChart.update();
+            }
+        }
+
+        function updateTrendSummary() {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const calorieData = {};
+            const dates = [];
+
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(today.getDate() - i);
+                const dateKey = date.toISOString().split('T')[0];
+                calorieData[dateKey] = 0;
+                dates.push(dateKey);
+            }
+
+            allMeals.forEach(meal => {
+                if (calorieData.hasOwnProperty(meal.date)) {
+                    const data = foodDatabase[meal.food];
+                    const factor = meal.amount / 100;
+                    calorieData[meal.date] += data.calories * factor;
+                }
+            });
+
+            // Använd språkberoende veckodagsnamn för diagram
+            let locale = 'sv-SE';
+            switch (currentLang) {
+                case 'en': locale = 'en-US'; break;
+                case 'es': locale = 'es-ES'; break;
+                case 'it': locale = 'it-IT'; break;
+            }
+
+            const chartLabels = dates.map(dateStr => {
+                const [year, month, day] = dateStr.split('-').map(Number);
+                const date = new Date(year, month - 1, day);
+                return date.toLocaleDateString(locale, { weekday: 'short', day: 'numeric' });
+            });
+            const chartValues = dates.map(dateKey => calorieData[dateKey].toFixed(0));
+
+            if (trendChart) {
+                trendChart.data.labels = chartLabels;
+                trendChart.data.datasets[0].data = chartValues;
+
+                const calorieGoal = dietGoals.calories || 0;
+                const goalData = chartLabels.map(() => calorieGoal);
+
+                trendChart.data.datasets[1].data = goalData;
+                trendChart.data.datasets[1].hidden = (calorieGoal === 0);
+
+                trendChart.update();
+            }
+        }
+
+        function updateActivityTrendSummary() {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const activityData = {};
+            const dates = [];
+
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(today.getDate() - i);
+                const dateKey = date.toISOString().split('T')[0];
+                activityData[dateKey] = activityMinutes[dateKey] || 0;
+                dates.push(dateKey);
+            }
+
+            // Använd språkberoende veckodagsnamn för diagram
+            let locale = 'sv-SE';
+            switch (currentLang) {
+                case 'en': locale = 'en-US'; break;
+                case 'es': locale = 'es-ES'; break;
+                case 'it': locale = 'it-IT'; break;
+            }
+
+            const chartLabels = dates.map(dateStr => {
+                const [year, month, day] = dateStr.split('-').map(Number);
+                const date = new Date(year, month - 1, day);
+                return date.toLocaleDateString(locale, { weekday: 'short', day: 'numeric' });
+            });
+            const chartValues = dates.map(dateKey => activityData[dateKey].toFixed(0));
+
+            if (activityTrendChart) {
+                activityTrendChart.data.labels = chartLabels;
+                activityTrendChart.data.datasets[0].data = chartValues;
+
+                const activityGoalValue = activityGoal || 0;
+                const goalData = chartLabels.map(() => activityGoalValue);
+
+                activityTrendChart.data.datasets[1].data = goalData;
+                activityTrendChart.data.datasets[1].hidden = (activityGoalValue === 0);
+
+                activityTrendChart.update();
+            }
+        }
+
+        function updateGoalStatusChart() {
+            const waterAchieved = waterIntake[currentDate] || 0;
+            const activityAchieved = activityMinutes[currentDate] || 0;
+
+            let totalCalories = 0;
+            allMeals.filter(meal => meal.date === currentDate).forEach(meal => {
+                const data = foodDatabase[meal.food];
+                const factor = meal.amount / 100;
+                totalCalories += data.calories * factor;
+            });
+
+            const goalData = [
+                waterGoal,
+                activityGoal,
+                dietGoals.calories || 0
+            ];
+
+            const achievedData = [
+                waterAchieved,
+                activityAchieved,
+                totalCalories
+            ];
+
+            const remainingData = achievedData.map((achieved, index) => {
+                const goal = goalData[index];
+                if (goal === 0) return 0;
+                return Math.max(0, goal - achieved);
+            });
+
+            goalStatusChart.data.datasets[0].data = achievedData.map((a, i) => Math.min(a, goalData[i] || a));
+            goalStatusChart.data.datasets[1].data = remainingData;
+
+            goalStatusChart.update();
+        }
+    </script>
+</body>
+
+</html>
